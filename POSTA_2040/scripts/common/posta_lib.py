@@ -97,11 +97,11 @@ def holo_grid_nodes(nt, floor=3.2, bay=2.6, line_color=None, line_strength=1.6):
     wn = nt.nodes.new('ShaderNodeTexWhiteNoise'); wn.noise_dimensions = '3D'; nt.links.new(snap.outputs[0], wn.inputs['Vector'])
     pan = nt.nodes.new('ShaderNodeMath'); pan.operation = 'GREATER_THAN'; pan.inputs[1].default_value = 0.9; nt.links.new(wn.outputs['Value'], pan.inputs[0])
     pans = nt.nodes.new('ShaderNodeMath'); pans.operation = 'MULTIPLY'; pans.inputs[1].default_value = 0.12; nt.links.new(pan.outputs[0], pans.inputs[0])
-    ls = nt.nodes.new('ShaderNodeMath'); ls.operation = 'MULTIPLY'; ls.inputs[1].default_value = line_strength; nt.links.new(m2.outputs[0], ls.inputs[0])
+    ls = nt.nodes.new('ShaderNodeMath'); ls.operation = 'MULTIPLY'; ls.inputs[1].default_value = line_strength; ls.name = 'HOLO_LINES'; nt.links.new(m2.outputs[0], ls.inputs[0])
     tot = nt.nodes.new('ShaderNodeMath'); tot.operation = 'ADD'; nt.links.new(ls.outputs[0], tot.inputs[0]); nt.links.new(pans.outputs[0], tot.inputs[1])
     base = nt.nodes.new('ShaderNodeMath'); base.operation = 'ADD'; base.inputs[1].default_value = 0.008; nt.links.new(tot.outputs[0], base.inputs[0])
     em = nt.nodes.new('ShaderNodeEmission'); em.inputs['Color'].default_value = line_color; nt.links.new(base.outputs[0], em.inputs['Strength'])
-    tr = nt.nodes.new('ShaderNodeBsdfTransparent'); tr.inputs['Color'].default_value = tuple(0.3 + 0.9 * c for c in HOT70['dive'][:3]) + (1,)
+    tr = nt.nodes.new('ShaderNodeBsdfTransparent'); tr.name = 'HOLO_GLASS'; tr.inputs['Color'].default_value = tuple(0.3 + 0.9 * c for c in HOT70['dive'][:3]) + (1,)
     add = nt.nodes.new('ShaderNodeAddShader'); nt.links.new(tr.outputs[0], add.inputs[0]); nt.links.new(em.outputs[0], add.inputs[1])
     return add.outputs[0]
 

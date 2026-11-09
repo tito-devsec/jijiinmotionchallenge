@@ -473,3 +473,12 @@ def hover_helicopter(F, loc=(260, -210, 262)):
     for fc in rot.animation_data.action.fcurves:
         for kp in fc.keyframe_points: kp.interpolation = 'LINEAR'
     return heli, bpy.data.objects['HELI_PASSENGER_SEAT']
+
+
+def holo_look(lines=1.6, glass=0.55):
+    """Per-scene holographic shell intensity: line emission and glass transmission (lower = darker, less stacking glow)."""
+    for m in bpy.data.materials:
+        if not m.use_nodes: continue
+        n = m.node_tree.nodes
+        if 'HOLO_LINES' in n: n['HOLO_LINES'].inputs[1].default_value = lines
+        if 'HOLO_GLASS' in n: n['HOLO_GLASS'].inputs['Color'].default_value = tuple(glass * (0.4 + 1.2 * c) for c in P.HOT70['dive'][:3]) + (1,)

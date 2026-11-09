@@ -13,6 +13,7 @@ def build(scn, quality):
     pv = objs['CITY_PAVING']; mp = P.apply_binary(pv, progress=0.0, density=0.3, size=0.5, noise_scale=0.01, seed=5, height_bias=0.0, band=0.3)
     S.key_progress(mp, [(int(F * 0.4), 0.0), (F, 0.7)]); S.drive_flow(mp, speed=2.0)
     S.world_bluehour(sun_energy=0.25, strength=0.12)
+    S.holo_look(lines=1.0, glass=0.45)
     S.binary_rain((-100, 150), size=900, top=160, height=160, columns_per_km2=900, glyph=1.4, look_at=(-260, 90, 40))
     S.enable_mist(start=120, depth=1600, color=(0.03, 0.06, 0.14, 1), strength=0.5)
     gz = P.ground_z(-230, 120)
