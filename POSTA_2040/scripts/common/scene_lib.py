@@ -158,3 +158,22 @@ def apply_future_materials(objs):
     for i, s in enumerate(objs['CITY_BUILDING'].material_slots):
         s.material = roof if 'Roof' in (s.material.name if s.material else '') else wall
     for s in objs['CITY_ROAD'].material_slots: s.material = road
+
+def enable_mist(start=200, depth=1500, color=(0.35, 0.5, 0.8, 1), strength=0.7):
+    """Cheap atmospheric perspective: Mist pass mixed toward a haze colour in the compositor (no volumetrics)."""
+    sc = bpy.context.scene; vl = sc.view_layers[0]; vl.use_pass_mist = True
+    sc.world.mist_settings.start = start; sc.world.mist_settings.depth = depth; sc.world.mist_settings.falloff = 'QUADRATIC'
+    sc.use_nodes = True; nt = sc.node_tree
+    for n in list(nt.nodes): nt.nodes.remove(n)
+    rl = nt.nodes.new('CompositorNodeRLayers'); comp = nt.nodes.new('CompositorNodeComposite')
+    mix = nt.nodes.new('CompositorNodeMixRGB'); mix.blend_type = 'MIX'; mix.inputs[2].default_value = color
+    mul = nt.nodes.new('CompositorNodeMath'); mul.operation = 'MULTIPLY'; mul.inputs[1].default_value = strength
+    nt.links.new(rl.outputs['Mist'], mul.inputs[0]); nt.links.new(mul.outputs[0], mix.inputs[0])
+    nt.links.new(rl.outputs['Image'], mix.inputs[1]); nt.links.new(mix.outputs[0], comp.inputs[0])
+    # glow for emissive glyphs
+    glare = nt.nodes.new('CompositorNodeGlare'); glare.glare_type = 'BLOOM' if hasattr(glare, 'glare_type') else None
+    try:
+        glare.inputs['Threshold'].default_value = 1.2; glare.inputs['Strength'].default_value = 0.25
+    except Exception:
+        glare.threshold = 1.2
+    nt.links.new(mix.outputs[0], glare.inputs[0]); nt.links.new(glare.outputs[0], comp.inputs[0])

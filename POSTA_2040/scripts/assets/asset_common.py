@@ -148,6 +148,7 @@ def smooth(ob, angle=35):
 
 
 def parent(child, par):
+    bpy.context.view_layer.update()
     child.parent = par
     child.matrix_parent_inverse = par.matrix_world.inverted()
 

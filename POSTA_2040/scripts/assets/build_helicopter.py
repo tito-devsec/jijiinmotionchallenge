@@ -77,14 +77,14 @@ C.smooth(fus, 30)
 # canopy centre pillar (dark spine over the glass) and nose chin
 C.box('HELI_CANOPY_PILLAR', (0, 3.9, 2.78), (0.22, 3.2, 0.10), col, M_DARK, rot=(math.radians(-14), 0, 0))
 for sx in (1, -1):
-    C.box(f'HELI_SIDE_FAIRING_{"R" if sx>0 else "L"}', (sx * 1.20, 2.3, 1.55), (0.25, 1.6, 0.5), col, M_HULL, rot=(0, 0, math.radians(sx * 8)))
+    C.box(f'HELI_SIDE_FAIRING_{"R" if sx>0 else "L"}', (sx * 1.14, 3.1, 1.45), (0.25, 1.1, 0.45), col, M_HULL, rot=(0, 0, math.radians(sx * 8)))
 
 # cabin floor and bench with two seats on the -X wall facing the +X door
 C.box('HELI_CABIN_FLOOR', (0.0, 0.85, 0.80), (2.0, 2.4, 0.06), col, M_INTERIOR)
 def seat(name, y):
-    base = C.box(name, (-0.62, y, 1.00), (0.55, 0.55, 0.14), col, M_SEAT_PAD)
-    back = C.box(name + '_BACK', (-0.86, y, 1.30), (0.12, 0.55, 0.60), col, M_SEAT)
-    arm = C.box(name + '_SIDE', (-0.62, y, 1.00), (0.55, 0.06, 0.26), col, M_SEAT)
+    base = C.box(name, (-0.50, y, 1.02), (0.62, 0.60, 0.16), col, M_SEAT_PAD)
+    back = C.box(name + '_BACK', (-0.78, y, 1.38), (0.14, 0.60, 0.72), col, M_SEAT)
+    arm = C.box(name + '_SIDE', (-0.50, y, 1.06), (0.62, 0.07, 0.30), col, M_SEAT)
     arm.location.y = y - 0.30 if 'R' in name else y + 0.30
     for o in (back, arm): C.parent(o, base)
     return base
@@ -92,7 +92,7 @@ def seat(name, y):
 seat_l = seat('HELI_SEAT_L', 1.17)
 seat_r = seat('HELI_SEAT_R', 0.53)
 pax = bpy.data.objects.new('HELI_PASSENGER_SEAT', None); pax.empty_display_type = 'ARROWS'; pax.empty_display_size = 0.5
-col.objects.link(pax); pax.location = (-0.62, 0.85, 1.07); pax.rotation_euler = (0, 0, math.radians(-90))  # local +Y -> world +X (out of the door)
+col.objects.link(pax); pax.location = (-0.50, 0.85, 1.10); pax.rotation_euler = (0, 0, math.radians(-90))  # local +Y -> world +X (out of the door)
 
 # engine deck housing, exhaust, side intakes, vent panel over the door
 eng = C.box('HELI_ENGINE_DECK', (0, 0.0, 3.18), (1.25, 3.4, 0.50), col, M_HULL)
@@ -195,5 +195,10 @@ print('saved', BLEND)
 
 if not NO_RENDER:
     C.studio(size=12.0, cam_loc=(14.0, 9.5, 3.8), target=(0, 0.0, 2.0), lens=50)
+    # preview-only fill aimed into the open doorway so the bench reads
+    ld = bpy.data.lights.new('DOOR_FILL', 'SPOT'); ld.energy = 2500; ld.spot_size = math.radians(40); ld.spot_blend = 0.5
+    dl = bpy.data.objects.new('DOOR_FILL', ld); bpy.data.collections['STUDIO'].objects.link(dl); dl.location = (7.0, 2.5, 3.0)
+    tg = P.make_empty('DOOR_TARGET', (-0.5, 0.85, 1.3)); C.link(tg, bpy.data.collections['STUDIO'])
+    c = dl.constraints.new('TRACK_TO'); c.target = tg; c.track_axis = 'TRACK_NEGATIVE_Z'; c.up_axis = 'UP_Y'
     C.render(PREVIEW)
     print('rendered', PREVIEW)

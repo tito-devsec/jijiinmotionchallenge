@@ -499,7 +499,7 @@ if not NORENDER:
     K.ground('GROUND', 600, M_GROUND)
     layout = {'CRANE_TOWER': (6, 14, 0), 'EXCAVATOR': (-16, -2, 0), 'MIXER_TRUCK': (-4, 4, 0), 'SCAFFOLD_MODULE': (12, -4, 0),
               'STEEL_COLUMN': (18, 0, 0), 'STEEL_BEAM': (13, -11, 0), 'REBAR_CAGE': (20, -5, 0), 'MATERIAL_PALLET': (4, -8, 0),
-              'BARRIER': (-6, -10, 0), 'CONE': (-3, -9, 0), 'FENCE_PANEL': (-8, -14, 0), 'SITE_LIGHT': (0, -4, 0), 'BUILDUP_DEMO': (-20, 26, 0)}
+              'BARRIER': (-6, -10, 0), 'CONE': (-3, -9, 0), 'FENCE_PANEL': (-8, -14, 0), 'SITE_LIGHT': (0, -4, 0), 'BUILDUP_DEMO': (-14, 18, 0)}
     for n, loc in layout.items():
         r = bpy.data.objects[n]; r.location = loc
     bpy.data.objects['MIXER_TRUCK'].rotation_euler.z = math.radians(-35)

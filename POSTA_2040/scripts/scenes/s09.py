@@ -8,7 +8,7 @@ def build(scn, quality):
     S.fresh(); F = scn['frames']
     objs = S.load_city('future'); S.ocean_material_upgrade(dusk=False); S.apply_future_materials(objs)
     S.world_golden(strength=0.05, sun_elev=18, sun_az=262, sun_energy=2.6)
-    S.add_fog(density=0.00010, height=500, color=(0.9, 0.82, 0.72, 1))
+    S.enable_mist(start=300, depth=2600, color=(0.85, 0.76, 0.64, 1), strength=0.5)
     # continuity with scene 07/08: aerial, looking down on Kivukoni from the south-east over the harbour, slow drift
     cam = P.add_camera(loc=(650, -700, 420), target=(-100, 150, 20), lens=40)
     S.cam_path(cam, [(1, (650, -700, 420)), (F, (520, -620, 390))], [(1, (-100, 150, 20)), (F, (-60, 170, 30))])
@@ -18,4 +18,4 @@ def build(scn, quality):
         cam.rotation_euler = cam.rotation_euler  # tracked by constraint; add tiny offsets via delta
         cam.delta_rotation_euler = (math.radians(random.uniform(-0.15, 0.15)), math.radians(random.uniform(-0.15, 0.15)), 0)
         cam.keyframe_insert('delta_rotation_euler', frame=f)
-    P.setup_render(samples=28, frame_end=F, volumes=True); S.frame_range(scn)
+    P.setup_render(samples=28, frame_end=F); S.frame_range(scn)

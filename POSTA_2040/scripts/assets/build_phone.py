@@ -64,25 +64,30 @@ def mat_back():
     mp2 = nt.nodes.new('ShaderNodeMapping'); mp2.inputs['Rotation'].default_value = (0, 0, math.radians(-40))
     nt.links.new(tc.outputs['Object'], mp2.inputs['Vector'])
     wave2 = nt.nodes.new('ShaderNodeTexWave'); wave2.wave_type = 'BANDS'; wave2.bands_direction = 'Y'; wave2.wave_profile = 'SIN'
-    wave2.inputs['Scale'].default_value = 60.0; wave2.inputs['Distortion'].default_value = 4.0; wave2.inputs['Detail'].default_value = 2.0; wave2.inputs['Detail Scale'].default_value = 1.5
+    wave2.inputs['Scale'].default_value = 170.0; wave2.inputs['Distortion'].default_value = 6.0; wave2.inputs['Detail'].default_value = 2.0; wave2.inputs['Detail Scale'].default_value = 1.5
     nt.links.new(mp2.outputs[0], wave2.inputs['Vector'])
     # plume mask: only in some regions (noise) so the streaks look like scattered feathers
     mask = nt.nodes.new('ShaderNodeTexNoise'); mask.inputs['Scale'].default_value = 14.0; mask.inputs['Detail'].default_value = 1.0
     nt.links.new(tc.outputs['Object'], mask.inputs['Vector'])
-    maskr = nt.nodes.new('ShaderNodeMapRange'); maskr.inputs['From Min'].default_value = 0.42; maskr.inputs['From Max'].default_value = 0.62
+    maskr = nt.nodes.new('ShaderNodeMapRange'); maskr.inputs['From Min'].default_value = 0.50; maskr.inputs['From Max'].default_value = 0.68
     nt.links.new(mask.outputs['Fac'], maskr.inputs['Value'])
+    # streaks = mask * (0.7*plume + 0.5*fine) + 0.08*fine  (faint brushed look everywhere, plumes only in masked regions)
+    fine = nt.nodes.new('ShaderNodeMath'); fine.operation = 'MULTIPLY'; fine.inputs[1].default_value = 0.5
+    nt.links.new(wave.outputs['Fac'], fine.inputs[0])
+    plume = nt.nodes.new('ShaderNodeMath'); plume.operation = 'MULTIPLY_ADD'; plume.inputs[1].default_value = 0.7
+    nt.links.new(wave2.outputs['Fac'], plume.inputs[0]); nt.links.new(fine.outputs[0], plume.inputs[2])
+    faint = nt.nodes.new('ShaderNodeMath'); faint.operation = 'MULTIPLY'; faint.inputs[1].default_value = 0.16
+    nt.links.new(wave.outputs['Fac'], faint.inputs[0])
     comb = nt.nodes.new('ShaderNodeMath'); comb.operation = 'MULTIPLY_ADD'
-    nt.links.new(wave2.outputs['Fac'], comb.inputs[0]); nt.links.new(maskr.outputs[0], comb.inputs[1])
-    fine = nt.nodes.new('ShaderNodeMath'); fine.operation = 'MULTIPLY'; fine.inputs[1].default_value = 0.45
-    nt.links.new(wave.outputs['Fac'], fine.inputs[0]); nt.links.new(fine.outputs[0], comb.inputs[2])
+    nt.links.new(plume.outputs[0], comb.inputs[0]); nt.links.new(maskr.outputs[0], comb.inputs[1]); nt.links.new(faint.outputs[0], comb.inputs[2])
     # colour mix: base sage -> lighter sage/cream along streaks
     mix = nt.nodes.new('ShaderNodeMix'); mix.data_type = 'RGBA'; mix.blend_type = 'MIX'
     mix.inputs['A'].default_value = (0.36, 0.46, 0.27, 1); mix.inputs['B'].default_value = (0.62, 0.72, 0.48, 1)
-    fac = nt.nodes.new('ShaderNodeMapRange'); fac.inputs['From Min'].default_value = 0.0; fac.inputs['From Max'].default_value = 1.5; fac.inputs['To Max'].default_value = 0.8
+    fac = nt.nodes.new('ShaderNodeMapRange'); fac.inputs['From Min'].default_value = 0.0; fac.inputs['From Max'].default_value = 1.2; fac.inputs['To Max'].default_value = 0.85
     nt.links.new(comb.outputs[0], fac.inputs['Value']); nt.links.new(fac.outputs[0], mix.inputs['Factor'])
     nt.links.new(mix.outputs['Result'], b.inputs['Base Color'])
     # roughness variation along streaks (anisotropic-ish sheen)
-    rr = nt.nodes.new('ShaderNodeMapRange'); rr.inputs['From Max'].default_value = 1.6; rr.inputs['To Min'].default_value = 0.30; rr.inputs['To Max'].default_value = 0.12
+    rr = nt.nodes.new('ShaderNodeMapRange'); rr.inputs['From Max'].default_value = 1.2; rr.inputs['To Min'].default_value = 0.30; rr.inputs['To Max'].default_value = 0.12
     nt.links.new(comb.outputs[0], rr.inputs['Value']); nt.links.new(rr.outputs[0], b.inputs['Roughness'])
     b.inputs['Coat Roughness'].default_value = 0.08
     return m
@@ -238,7 +243,7 @@ for k, (yc, ln, hz, pr) in BTN.items():
     ob = finish(bm, 'PHONE_Btn_' + ('Volume' if k == 'vol' else 'Power'), [MAT_ACCENT if k == 'pwr' else MAT_FRAME])
     bevel(ob, 0.0004, 3, 40)
 # SIM tray face (sits flush in its recess)
-bm = bmesh.new(); prism(bm, rr_points(0.0111, 0.0018, 0.0008, 6), W / 2 - 0.0010, W / 2 - 0.0002, M_YZ, offset=(0, +0.0289, 0))
+bm = bmesh.new(); prism(bm, rr_points(0.0109, 0.0017, 0.0008, 6), W / 2 - 0.0010, W / 2 - 0.00004, M_YZ, offset=(0, +0.0289, 0))
 finish(bm, 'PHONE_SimTray', [MAT_FRAME])
 
 # ------------------------------------------------------------------ SCREEN (glass + display + punch hole)
@@ -283,7 +288,7 @@ for i, y in enumerate(LENS_Y):
         bm = bmesh.new(); prism(bm, rr_points(MOD, MOD, 0.0036, 10), Z_ISL + 0.0005, Z_ISL - 0.0007, offset=off)
         ring = finish(bm, f'PHONE_LensFrame_{i+1}', [MAT_RING]); bevel(ring, 0.00025, 3, 40)
         # dark squircle glass insert
-        bm = bmesh.new(); prism(bm, rr_points(MOD - 0.0022, MOD - 0.0022, 0.0028, 10), Z_ISL - 0.0004, Z_ISL - 0.00072, offset=off)
+        bm = bmesh.new(); prism(bm, rr_points(MOD - 0.0018, MOD - 0.0018, 0.0030, 10), Z_ISL - 0.0004, Z_ISL - 0.00072, offset=off)
         finish(bm, f'PHONE_LensInsert_{i+1}', [MAT_GLASS_BLACK])
         # lens element + iris + glass dome
         bm = bmesh.new(); prism(bm, circle_points(0.0034, 48), Z_ISL - 0.00072, Z_ISL - 0.00076, offset=off); finish(bm, f'PHONE_LensRim_{i+1}', [MAT_LENS_IRIS])
@@ -351,11 +356,11 @@ if RENDER:
         tgt = bpy.data.objects.new(name + '_tgt', None); PREV.objects.link(tgt); tgt.location = target
         c = ob.constraints.new('TRACK_TO'); c.target = tgt; c.track_axis = 'TRACK_NEGATIVE_Z'; c.up_axis = 'UP_Y'
         return ob
-    area('KEY', (0.30, -0.28, 0.40), 20, 0.35, (1.0, 0.97, 0.92))
-    area('FILL', (-0.40, -0.20, 0.22), 9, 0.60, (0.9, 0.95, 1.0))
-    area('RIM', (-0.10, 0.32, 0.28), 24, 0.35, (1.0, 1.0, 1.0))
+    area('KEY', (0.30, -0.28, 0.40), 3.2, 0.60, (1.0, 0.97, 0.92))
+    area('FILL', (-0.40, -0.20, 0.22), 1.4, 0.80, (0.9, 0.95, 1.0))
+    area('RIM', (-0.10, 0.32, 0.28), 3.5, 0.50, (1.0, 1.0, 1.0))
     # long soft strip light to draw a highlight line along the frame / glossy surfaces
-    area('STRIP', (0.02, 0.02, 0.55), 7, 0.9, (1, 1, 1)).data.size_y = 0.10
+    area('STRIP', (0.02, 0.02, 0.55), 1.3, 1.0, (1, 1, 1)).data.size_y = 0.16
     # world: dark vertical gradient
     sc = bpy.context.scene; w = sc.world or bpy.data.worlds.new('World'); sc.world = w; w.use_nodes = True; nt = w.node_tree
     for n in list(nt.nodes): nt.nodes.remove(n)
