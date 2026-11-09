@@ -459,7 +459,7 @@ def cabin_passenger(seat, F):
     link_asset('phone.blend', 'PHONE'); phone = bpy.data.objects['PHONE_ROOT']
     phone.parent = seat; phone.matrix_parent_inverse.identity(); phone.rotation_euler = (math.radians(-90), math.radians(90), 0)
     bpy.context.view_layer.update()
-    phone.location = seat.matrix_world.inverted() @ hand + Vector((0.0, 0.06, 0.04))
+    phone.location = seat.matrix_world.inverted() @ hand + Vector((0.0, 0.03, 0.0))   # gripped at the fingertips, screen toward the face
     # warm cabin practical so the hero reads against the blue-hour exterior
     for nm, loc, e, size, col in (('CABIN_PRACTICAL', (0.0, -0.2, 1.4), 160, 0.8, P.HOT70['thermo']),    # warm overhead
                                   ('CITY_GLOW', (0.0, 2.2, 0.6), 220, 2.5, P.HOT70['violet']),             # skyline glow through the door
