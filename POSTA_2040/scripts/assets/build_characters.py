@@ -202,15 +202,15 @@ def pattern_material(name='MAT_hero_pattern'):
     b.inputs['Sheen Weight'].default_value = 0.4
     tc = nt.nodes.new('ShaderNodeTexCoord'); mp = nt.nodes.new('ShaderNodeMapping'); mp.inputs['Scale'].default_value = (1, 1, 1.6)
     nt.links.new(tc.outputs['Object'], mp.inputs['Vector'])
-    n1 = nt.nodes.new('ShaderNodeTexNoise'); n1.inputs['Scale'].default_value = 14.0; n1.inputs['Detail'].default_value = 2.5; n1.inputs['Roughness'].default_value = 0.45; n1.inputs['Distortion'].default_value = 1.8
+    n1 = nt.nodes.new('ShaderNodeTexNoise'); n1.inputs['Scale'].default_value = 4.5; n1.inputs['Detail'].default_value = 2.0; n1.inputs['Roughness'].default_value = 0.45; n1.inputs['Distortion'].default_value = 1.8
     nt.links.new(mp.outputs[0], n1.inputs['Vector'])
-    vor = nt.nodes.new('ShaderNodeTexVoronoi'); vor.feature = 'DISTANCE_TO_EDGE'; vor.inputs['Scale'].default_value = 9.0
+    vor = nt.nodes.new('ShaderNodeTexVoronoi'); vor.feature = 'DISTANCE_TO_EDGE'; vor.inputs['Scale'].default_value = 3.2
     nt.links.new(n1.outputs['Color'], vor.inputs['Vector'])
     r1 = nt.nodes.new('ShaderNodeValToRGB'); r1.color_ramp.interpolation = 'CONSTANT'
     r1.color_ramp.elements[0].position = 0.0; r1.color_ramp.elements[0].color = (0.9, 0.9, 0.88, 1)
-    r1.color_ramp.elements[1].position = 0.06; r1.color_ramp.elements[1].color = (0.01, 0.01, 0.01, 1)
-    e = r1.color_ramp.elements.new(0.16); e.color = (0.9, 0.9, 0.88, 1)
-    e2 = r1.color_ramp.elements.new(0.28); e2.color = (0.01, 0.01, 0.01, 1)
+    r1.color_ramp.elements[1].position = 0.045; r1.color_ramp.elements[1].color = (0.01, 0.01, 0.01, 1)
+    e = r1.color_ramp.elements.new(0.13); e.color = (0.9, 0.9, 0.88, 1)
+    e2 = r1.color_ramp.elements.new(0.3); e2.color = (0.01, 0.01, 0.01, 1)
     nt.links.new(vor.outputs['Distance'], r1.inputs['Fac'])
     nt.links.new(r1.outputs['Color'], b.inputs['Base Color'])
     return m
@@ -279,6 +279,9 @@ def torso_shell(S, B, off, zb, zt, n=12, deltoids=True, breasts=True, hips_extra
         rx, ry, cy = torso_section(B, zz)
         g = max(0.0, 1 - abs(zz - (z['hip'] - 0.015 * s)) / (0.12 * s))  # glute / hip fullness
         path.append(((0, cy * s - 0.02 * s * g, zz), rx * s + off + hips_extra * g, ry * s + off + 0.045 * s * g))
+    # rounded closings: a tapered ring 2 cm beyond each end keeps the hem/waist edge from collapsing under smoothing
+    c0, r0u, r0v = path[0]; c1, r1u, r1v = path[-1]
+    path = [((c0[0], c0[1], c0[2] - 0.02 * s), r0u * 0.72, r0v * 0.72)] + path + [((c1[0], c1[1], c1[2] + 0.02 * s), r1u * 0.72, r1v * 0.72)]
     S.loft(path, segs=32)
     if deltoids:
         for sd in (-1, 1):
@@ -419,10 +422,17 @@ def head_accessories(B, col, prefix, mats, hair='short', female=False):
     hd = [(z['eye'] + 0.012 * s, 0.079, 0.1, -0.024), (z['eye'] + 0.035 * s, 0.08, 0.1, -0.02),
           (z['eye'] + 0.06 * s, 0.079, 0.099, -0.014), (z['top'] - 0.035 * s, 0.07, 0.09, -0.01),
           (z['top'] - 0.008 * s, 0.046, 0.062, -0.013), (z['top'] + 0.01 * s, 0.014, 0.018, -0.016)]
-    hf, ha = (1.3, 0.03) if hair == 'afro' else (1.1, 0.008)
+    hf, ha = (1.22, 0.022) if hair == 'afro' else (1.1, 0.008)
     if hair == 'afro':
-        hd = [(z['eye'] - 0.005 * s, 0.079, 0.1, -0.03)] + hd
-    S = Shape(); S.loft([((0, cy * s, zz), rx * s * hf + ha, ry * s * (hf - 0.02) + ha) for (zz, rx, ry, cy) in hd], segs=32)
+        hd = [(z['eye'] + 0.002 * s, 0.079, 0.1, -0.03)] + hd
+    hp = []
+    for (zz, rx, ry, cy) in hd:
+        ru, rv = rx * s * hf + ha, ry * s * (hf - 0.02) + ha
+        cyy = cy * s
+        if hair == 'afro':
+            cyy = min(cyy, 0.078 * s - rv)   # front of the afro stays behind the hairline
+        hp.append(((0, cyy, zz), ru, rv))
+    S = Shape(); S.loft(hp, segs=32)
     S.ellipsoid((0, -0.05 * s, z['eye'] - 0.005 * s), (0.086 * s, 0.07 * s, 0.05 * s))  # occiput / nape coverage
     if hair == 'bun':
         S.ellipsoid((0, -0.085 * s, z['top'] - 0.02 * s), (0.04 * s, 0.035 * s, 0.035 * s))
@@ -430,12 +440,12 @@ def head_accessories(B, col, prefix, mats, hair='short', female=False):
         S.loft([((0, -0.07 * s, z['eye'] + 0.02 * s), 0.07 * s, 0.045 * s), ((0, -0.075 * s, z['chin']), 0.075 * s, 0.04 * s),
                 ((0, -0.08 * s, z['neck_base'] - 0.02 * s), 0.07 * s, 0.035 * s)], segs=20)
     if hair == 'afro':
-        S.ellipsoid((0, -0.06 * s, z['eye'] - 0.0 * s), (0.11 * s, 0.09 * s, 0.07 * s))
+        S.ellipsoid((0, -0.07 * s, z['eye'] + 0.01 * s), (0.105 * s, 0.085 * s, 0.065 * s))
     hr = S.to_object(f'{prefix}_hair', col)
     rm = hr.modifiers.new('Remesh', 'REMESH'); rm.mode = 'VOXEL'; rm.voxel_size = 0.008; apply_modifiers(hr)
     if hair == 'afro':
         dp = hr.modifiers.new('Afro', 'DISPLACE'); tx = bpy.data.textures.new(f'{prefix}_afro_tex', 'CLOUDS'); tx.noise_scale = 0.02; tx.noise_depth = 2
-        dp.texture = tx; dp.strength = 0.012; dp.mid_level = 0.5; apply_modifiers(hr)
+        dp.texture = tx; dp.strength = 0.006; dp.mid_level = 0.5; apply_modifiers(hr)
     ls = hr.modifiers.new('S', 'LAPLACIANSMOOTH'); ls.iterations = 2; ls.lambda_factor = 0.5; ls.use_volume_preserve = True; apply_modifiers(hr)
     shade_smooth(hr); hr.data.materials.append(mats['afro'] if hair == 'afro' else mats['hair'])
     out.append((hr, 'head'))
@@ -784,7 +794,7 @@ def hero_extras(C):
         S.loft(rim, segs=6, vhint=(0, 1, 0))
     frame = S.to_object(f'{name}_sunglass_frame', col); shade_smooth(frame); frame.data.materials.append(frame_m)
     # open shirt: inflated shell with short sleeves, front cut away in a V, solidified
-    sh = shirt(B, col, name + '_open', pattern_material(), sleeves='short', hem=z['hip'] - 0.04 * s, off=0.034, neck=True)
+    sh = shirt(B, col, name + '_open', pattern_material(), sleeves='short', hem=z['hip'] - 0.04 * s, off=0.03, neck=True)
     sh.name = f'{name}_shirt'
     bm = bmesh.new(); bm.from_mesh(sh.data)
     hem, top = z['hip'] - 0.04 * s, z['neck_base'] + 0.012 * s
