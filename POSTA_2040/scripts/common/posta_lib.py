@@ -272,7 +272,7 @@ def setup_world(sun_rot=(math.radians(50), 0, math.radians(-120)), sun_energy=3.
     out = nt.nodes.new('ShaderNodeOutputWorld'); bg = nt.nodes.new('ShaderNodeBackground')
     if sky:
         sk = nt.nodes.new('ShaderNodeTexSky'); sk.sky_type = 'NISHITA'; sk.sun_elevation = math.radians(sun_elev); sk.sun_rotation = math.radians(sun_az)
-        sk.sun_intensity = 0.4; sk.sun_size = math.radians(1.5); sk.air_density = 1.2; sk.dust_density = turbidity; sk.ozone_density = 1.0
+        sk.sun_intensity = 0.4; sk.sun_size = math.radians(1.5); sk.air_density = 1.1; sk.dust_density = turbidity * 0.5; sk.ozone_density = 1.2
         nt.links.new(sk.outputs[0], bg.inputs[0]); bg.inputs[1].default_value = sky_strength
     else:
         bg.inputs[0].default_value = horizon or PAL['space']; bg.inputs[1].default_value = sky_strength

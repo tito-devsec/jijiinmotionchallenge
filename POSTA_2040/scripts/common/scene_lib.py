@@ -135,14 +135,14 @@ def road_lane_material():
 
 def facade_2040_material():
     """Realistic futuristic facade: glass + metal panel pattern by object-space brick texture, warm interior lights."""
-    m = P.new_mat('MAT_Wall2040', (0.5, 0.56, 0.62, 1), 0.2, 0.7, coat=0.5); nt = m.node_tree; b = nt.nodes['Principled BSDF']
+    m = P.new_mat('MAT_Wall2040', (0.08, 0.12, 0.16, 1), 0.1, 0.9, coat=0.8); nt = m.node_tree; b = nt.nodes['Principled BSDF']
     tc = nt.nodes.new('ShaderNodeTexCoord'); brick = nt.nodes.new('ShaderNodeTexBrick')
-    brick.inputs['Scale'].default_value = 0.35; brick.inputs['Mortar Size'].default_value = 0.08; brick.inputs['Brick Width'].default_value = 2.2; brick.inputs['Row Height'].default_value = 1.0
-    brick.inputs['Color1'].default_value = (0.08, 0.1, 0.13, 1); brick.inputs['Color2'].default_value = (0.5, 0.56, 0.62, 1); brick.inputs['Mortar'].default_value = (0.3, 0.32, 0.34, 1)
+    brick.inputs['Scale'].default_value = 0.5; brick.inputs['Mortar Size'].default_value = 0.06; brick.inputs['Brick Width'].default_value = 1.6; brick.inputs['Row Height'].default_value = 1.0; brick.offset = 0.0
+    brick.inputs['Color1'].default_value = (0.05, 0.08, 0.11, 1); brick.inputs['Color2'].default_value = (0.09, 0.13, 0.17, 1); brick.inputs['Mortar'].default_value = (0.55, 0.58, 0.6, 1)
     nt.links.new(tc.outputs['Object'], brick.inputs['Vector']); nt.links.new(brick.outputs['Color'], b.inputs['Base Color'])
     # windows (dark bricks) are glossy; panels rougher
     ramp = nt.nodes.new('ShaderNodeValToRGB'); nt.links.new(brick.outputs['Fac'], ramp.inputs[0])
-    inv = nt.nodes.new('ShaderNodeMath'); inv.operation = 'MULTIPLY_ADD'; inv.inputs[1].default_value = 0.4; inv.inputs[2].default_value = 0.08
+    inv = nt.nodes.new('ShaderNodeMath'); inv.operation = 'MULTIPLY_ADD'; inv.inputs[1].default_value = 0.25; inv.inputs[2].default_value = 0.06
     nt.links.new(brick.outputs['Fac'], inv.inputs[0]); nt.links.new(inv.outputs[0], b.inputs['Roughness'])
     # random warm lit windows
     noise = nt.nodes.new('ShaderNodeTexWhiteNoise'); noise.noise_dimensions = '3D'
@@ -195,4 +195,5 @@ def terrain_urban_material():
 def snap_to_road(x, y):
     import numpy as np
     o = bpy.data.objects['CITY_ROAD']; co = np.empty(len(o.data.vertices) * 3); o.data.vertices.foreach_get('co', co); co = co.reshape(-1, 3)
+    co = co[co[:, 2] > 2.5]  # keep land roads only (piers excluded)
     i = np.hypot(co[:, 0] - x, co[:, 1] - y).argmin(); return (float(co[i, 0]), float(co[i, 1]), float(co[i, 2]))

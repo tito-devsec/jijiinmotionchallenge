@@ -36,7 +36,7 @@ def pick(rng, mix):
     return mix[-1][0]
 
 def is_coastal(x, y, ground):
-    return (y < 80 and x > -100) or ground < 8.0
+    return (y < 80 and x > -100) or ground < 3.5   # low ground near the harbour; ~25% of the map trees
 
 def choose_species(rng, t, ground):
     sp = t.get('species', 'broadleaf')

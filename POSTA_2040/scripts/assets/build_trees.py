@@ -331,10 +331,10 @@ SPECIES_PARAMS = {
                L(4, 5, 0.35, 0.22, -0.06, 0.12, (4, 6), 0.25, (30, 65), (0.5, 0.75), 0.55),
                L(3, 4, 0.3, 0.3, -0.08, 0.0, (0, 0), 0.3, (30, 60), (0.5, 0.7), 0.5)]),
     # dense round mango: short thick dark trunk, 4-6 scaffolds, very dense canopy almost to the ground
-    'MANGO': dict(seed=303, trunk_len=2.2, trunk_r=0.32, levels=4, leaf_level=2, env=(6.3, 4.4, 3.9), cards_per_m=14, card_size=0.62, card_tilt=0.6, fruit=60, tip_cards=8, tip_r=0.9,
+    'MANGO': dict(seed=303, trunk_len=2.2, trunk_r=0.32, levels=4, leaf_level=2, env=(6.2, 4.3, 4.0), cards_per_m=16, card_size=0.6, card_tilt=0.6, fruit=70, tip_cards=12, tip_r=1.0,
         leaf_tex='leaves_mango.png', bark_tex='bark_mango.png', bark_tint=(0.6, 0.55, 0.55, 1),
-        level=[L(4, 14, 0.75, 0.05, 0.0, 0.0, (6, 7), 0.5, (35, 60), (1.6, 2.2), 0.62),
-               L(5, 8, 0.45, 0.12, -0.02, 0.2, (5, 7), 0.3, (30, 60), (0.6, 0.9), 0.6),
+        level=[L(4, 14, 0.75, 0.05, 0.0, 0.0, (6, 8), 0.5, (35, 60), (1.6, 2.2), 0.62),
+               L(5, 8, 0.45, 0.12, -0.02, 0.2, (6, 8), 0.3, (30, 60), (0.6, 0.9), 0.6),
                L(4, 5, 0.35, 0.2, -0.05, 0.1, (4, 6), 0.25, (30, 65), (0.55, 0.8), 0.55),
                L(3, 4, 0.3, 0.3, -0.1, 0.0, (0, 0), 0.3, (30, 60), (0.5, 0.7), 0.5)]),
     # spreading mango: fork at 1.3 m into 3 leaders, crown wider than tall, hanging fruit
