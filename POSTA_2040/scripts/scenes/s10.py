@@ -22,7 +22,7 @@ def build(scn, quality):
     drop = start.z - sea; t_hit = t_slip + math.sqrt(2 * drop / g)     # free fall: ~7.3 s from 262 m
     # the shot is F frames; play the fall in slight slow motion so it lands at ~72 % of the scene (matches the audio splash)
     slow = (t_hit) / (0.72 * F / fps)
-    random.seed(10); spin = Vector((7.5, 4.2, 2.8))
+    random.seed(10); spin = Vector((3.2, 1.8, 1.2))   # slower tumble so the phone reads on screen
     for f in range(1, F + 1):
         t = (f - 1) / fps * slow
         if t < t_slip: p = start + out * (0.4 * t / t_slip); rot = (0, 0, 0)
@@ -36,12 +36,12 @@ def build(scn, quality):
         for kp in fc.keyframe_points: kp.interpolation = 'LINEAR'
     # chase camera: starts beside the passenger, swings out and rides ~1.3 m above/behind the phone, held above the water
     A = S.seat_cams(seat, rig, phone); cam_start = seat.matrix_world @ A['shoulder']
-    cam = P.add_camera(loc=tuple(cam_start), target=phone, lens=26, dof_target=phone, fstop=5.6)
+    cam = P.add_camera(loc=tuple(cam_start), target=phone, lens=35, dof_target=phone, fstop=5.6)
     fcs = phone.animation_data.action.fcurves
     ev = lambda f: Vector([next(fc for fc in fcs if fc.data_path == 'location' and fc.array_index == i).evaluate(f) for i in range(3)])
     for f in range(1, F + 1):
         p = ev(f); k = min(1.0, (f - 1) / 30.0); k = k * k * (3 - 2 * k)
-        follow = p - out * 1.6 + Vector((0, 0, 0.45))   # behind the phone, looking past it at the lit Posta skyline
+        follow = p - out * 0.75 + Vector((0, 0, 0.3))   # close behind the phone, the lit Posta skyline beyond it
         c = cam_start.lerp(follow, k); c.z = max(c.z, 1.6)
         cam.location = c; cam.keyframe_insert('location', frame=f)
     for fc in cam.animation_data.action.fcurves:
@@ -58,4 +58,4 @@ def build(scn, quality):
         sp.hide_render = True; sp.keyframe_insert('hide_render', frame=1); sp.hide_render = False; sp.keyframe_insert('hide_render', frame=f_hit)
         for f in range(f_hit, F + 1):
             tt = (f - f_hit) / fps; sp.location = (hit.x + vx * tt, hit.y + vy * tt, sea + vz * tt - 0.5 * g * tt * tt); sp.keyframe_insert('location', frame=f)
-    P.setup_render(samples=28, frame_end=F, motion_blur=True); bpy.context.scene.render.motion_blur_shutter = 0.6; S.frame_range(scn)
+    P.setup_render(samples=28, frame_end=F, motion_blur=True); bpy.context.scene.render.motion_blur_shutter = 0.25; S.frame_range(scn)
