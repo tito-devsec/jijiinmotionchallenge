@@ -10,7 +10,7 @@ import posta_lib as P
 def _mix(a, b, f): return tuple(a[i] * (1 - f) + b[i] * f for i in range(3)) + (1.0,)
 DEEP = _mix(P.PAL['blue'], (0.0, 0.01, 0.04, 1), 0.85)        # deep blue-green, almost black
 MID = _mix(P.PAL['blue'], P.PAL['turq'], 0.25)                 # mid-water blue
-BRIGHT = _mix(MID, (0.5, 0.85, 1.0, 1), 0.45)                    # looking up toward the sun
+BRIGHT = _mix(MID, (0.35, 0.7, 1.0, 1), 0.4)                    # looking up toward the sun
 
 def _linear_extrap(id_data):
     ad = id_data.animation_data
@@ -129,7 +129,7 @@ def setup_underwater(scene, depth=12.0, size=200.0, density=0.014, anisotropy=0.
         c.transparent_max_bounces = 12; c.transmission_bounces = 8; c.max_bounces = 8
     return {'volume': vol, 'surface': surf, 'sun': sun, 'caustic': caus}
 
-def shaft_material(name='MAT_LightShaft', strength=0.045):
+def shaft_material(name='MAT_LightShaft', strength=0.12):
     """Emissive volume for god-ray cones: fades toward the bottom, soft radial edge, streaky, drifts over time."""
     m = bpy.data.materials.get(name) or bpy.data.materials.new(name); m.use_nodes = True; nt = m.node_tree
     for n in list(nt.nodes): nt.nodes.remove(n)
@@ -155,7 +155,7 @@ def shaft_material(name='MAT_LightShaft', strength=0.045):
     _linear_extrap(nt)
     return m
 
-def add_shaft_cones(scene, depth=12.0, count=16, radius=26.0, sun_tilt=22.0, sun_az=35.0, seed=5, strength=0.045):
+def add_shaft_cones(scene, depth=12.0, count=16, radius=26.0, sun_tilt=22.0, sun_az=35.0, seed=5, strength=0.12):
     """`count` emissive-volume cones ('UW_SHAFT_nn' in collection LIGHT_SHAFTS) hanging from the surface, leaning with the sun."""
     import bmesh, random
     rnd = random.Random(seed)
@@ -175,7 +175,7 @@ def add_shaft_cones(scene, depth=12.0, count=16, radius=26.0, sun_tilt=22.0, sun
         objs.append(ob)
     return objs
 
-def add_light_shafts(scene, size=120.0, z=1.5, scale=0.1, coverage=0.5, name='UW_SHAFT_GOBO', depth=12.0, count=16, radius=26.0, sun_tilt=22.0, sun_az=35.0, cones=True, strength=0.045):
+def add_light_shafts(scene, size=120.0, z=1.5, scale=0.1, coverage=0.5, name='UW_SHAFT_GOBO', depth=12.0, count=16, radius=26.0, sun_tilt=22.0, sun_az=35.0, cones=True, strength=0.12):
     """A shadow-only 'gobo' plane above the water surface with noisy holes: the caustic spot and sun shine through
     the gaps and produce volumetric shadows in WATER_VOLUME; camera rays ignore it. With cones=True also adds readable
     emissive god-ray cones (see add_shaft_cones). Returns the gobo object."""

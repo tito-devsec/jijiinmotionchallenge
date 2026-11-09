@@ -272,6 +272,9 @@ def body_shape(B, offset=0.0, parts=('torso', 'arms', 'legs', 'head', 'hands', '
         tor = torso_table(B)
         path = [((0, cy * s, zz), rx * s + o, ry * s + o) for (zz, rx, ry, cy) in tor]
         S.loft(path, segs=32)
+        # trapezius slope
+        for sd in (-1, 1):
+            S.ellipsoid((sd * 0.075 * s, -0.012 * s, z['neck_base'] - 0.015 * s), (0.075 * s + o, 0.055 * s + o, 0.038 * s + o), rot=('Y', math.radians(-12 * sd)))
         # deltoids
         for sd in (-1, 1):
             S.ellipsoid((sd * (B.shoulder_x - 0.005 * s), 0, z['shoulder'] - 0.01 * s), (0.062 * s * bk + o, 0.062 * s * bk + o, 0.075 * s * bk + o))
@@ -298,14 +301,14 @@ def body_shape(B, offset=0.0, parts=('torso', 'arms', 'legs', 'head', 'hands', '
         S.loft([((0, cy * s, zz), rx * s + o, ry * s + o) for (zz, rx, ry, cy) in hd], segs=32)
         if offset == 0.0:
             # nose, chin, ears, brow ridge, cheeks
-            S.ellipsoid((0, 0.094 * s, z['nose'] + 0.004 * s), (0.014 * s, 0.02 * s, 0.03 * s), rot=('X', math.radians(-14)))  # nose bridge/dorsum
-            S.ellipsoid((0, 0.106 * s, z['nose'] - 0.016 * s), (0.019 * s, 0.015 * s, 0.012 * s))  # tip + alae
+            S.ellipsoid((0, 0.096 * s, z['nose'] + 0.004 * s), (0.012 * s, 0.016 * s, 0.024 * s), rot=('X', math.radians(-16)))  # nose dorsum
+            S.ellipsoid((0, 0.108 * s, z['nose'] - 0.014 * s), (0.017 * s, 0.013 * s, 0.011 * s))  # tip + alae
             S.ellipsoid((0, 0.085 * s, z['chin'] + 0.014 * s), (0.034 * s, 0.028 * s, 0.026 * s))  # chin
             S.ellipsoid((0, 0.09 * s, z['mouth'] - 0.012 * s), (0.028 * s, 0.014 * s, 0.011 * s))  # lower lip
             S.ellipsoid((0, 0.09 * s, z['mouth'] + 0.009 * s), (0.026 * s, 0.012 * s, 0.008 * s))  # upper lip
             for sd in (-1, 1):
                 S.ellipsoid((sd * 0.083 * s, -0.012 * s, z['eye'] - 0.02 * s), (0.012 * s, 0.018 * s, 0.03 * s))  # ear
-                S.ellipsoid((sd * 0.052 * s, 0.072 * s, z['eye'] - 0.038 * s), (0.03 * s, 0.028 * s, 0.028 * s))  # cheek
+                S.ellipsoid((sd * 0.05 * s, 0.07 * s, z['eye'] - 0.03 * s), (0.028 * s, 0.026 * s, 0.022 * s))  # cheekbone (mostly buried)
                 S.ellipsoid((sd * 0.034 * s, 0.09 * s, z['eye'] + 0.02 * s), (0.03 * s, 0.014 * s, 0.009 * s))  # brow ridge
     if 'arms' in parts:
         for sd in (-1, 1):
@@ -336,7 +339,7 @@ def body_shape(B, offset=0.0, parts=('torso', 'arms', 'legs', 'head', 'hands', '
         for sd in (-1, 1):
             hp = B.mirror(B.hip, sd); kn = B.mirror(B.knee, sd); an = B.mirror(B.ankle, sd)
             th = [hp + (kn - hp) * t for t in (-0.05, 0.25, 0.55, 0.85, 1.0)]
-            rt = [0.092 * B.hw * bk, 0.088 * bk, 0.075 * bk, 0.062, 0.055]
+            rt = [0.086 * B.hw * bk, 0.086 * bk, 0.075 * bk, 0.062, 0.055]
             rt2 = [0.095 * bk, 0.09 * bk, 0.078 * bk, 0.064, 0.058]
             S.loft([(tuple(th[i]), rt[i] * s + o, rt2[i] * s + o) for i in range(5)], segs=24)
             sh = [kn + (an - kn) * t for t in (0.0, 0.25, 0.55, 0.85, 1.0)]
@@ -372,12 +375,15 @@ def head_accessories(B, col, prefix, mats, hair='short', female=False):
     s, z = B.s, B.z
     out = []
     for sd, nm in ((-1, 'L'), (1, 'R')):
-        S = Shape(); S.ellipsoid((sd * 0.032 * s, 0.084 * s, z['eye']), (0.0115 * s,) * 3, segs=16, rings=10)
+        S = Shape(); S.ellipsoid((sd * 0.032 * s, 0.082 * s, z['eye']), (0.011 * s,) * 3, segs=16, rings=10)
         eye = S.to_object(f'{prefix}_eye.{nm}', col); shade_smooth(eye); eye.data.materials.append(mats['eye'])
-        S = Shape(); S.ellipsoid((sd * 0.032 * s, 0.0945 * s, z['eye']), (0.0062 * s, 0.0025 * s, 0.0062 * s), segs=16, rings=8)
-        S.ellipsoid((sd * 0.032 * s, 0.0962 * s, z['eye']), (0.003 * s, 0.0015 * s, 0.003 * s), segs=12, rings=6)
+        S = Shape(); S.ellipsoid((sd * 0.032 * s, 0.0923 * s, z['eye']), (0.006 * s, 0.0025 * s, 0.006 * s), segs=16, rings=8)
+        S.ellipsoid((sd * 0.032 * s, 0.094 * s, z['eye']), (0.003 * s, 0.0015 * s, 0.003 * s), segs=12, rings=6)
         iris = S.to_object(f'{prefix}_iris.{nm}', col); shade_smooth(iris); iris.data.materials.append(mats['iris'])
-        S = Shape(); S.ellipsoid((sd * 0.034 * s, 0.1 * s, z['eye'] + 0.025 * s), (0.024 * s, 0.006 * s, 0.005 * s), rot=('Y', math.radians(10 * sd)), segs=12, rings=6)
+        S = Shape()
+        for k, bx in enumerate((0.016, 0.03, 0.044, 0.056)):
+            by = 0.1 * s * math.sqrt(max(0.0, 1 - (bx / 0.08) ** 2)) + 0.003 * s
+            S.ellipsoid((sd * bx * s, by, z['eye'] + (0.026 + 0.001 * k) * s), (0.009 * s, 0.006 * s, 0.0045 * s), segs=10, rings=6)
         brow = S.to_object(f'{prefix}_brow.{nm}', col); shade_smooth(brow); brow.data.materials.append(mats['hair'])
         out += [(eye, 'head'), (iris, 'head'), (brow, 'head')]
     # hair cap: loft following the cranium, slightly inflated, hairline pulled back
@@ -509,7 +515,7 @@ def shirt(B, col, prefix, mat, sleeves='short', hem=None, off=0.016, neck=True):
     s, z = B.s, B.z
     hem = hem if hem is not None else z['hip'] - 0.01 * s
     top = z['neck_base'] + (0.012 * s if neck else -0.015 * s)
-    S = torso_shell(Shape(), B, off, hem, top, deltoids=bool(sleeves) or off > 0.02, breasts=True, hips_extra=0.0)
+    S = torso_shell(Shape(), B, off, hem, top, deltoids=bool(sleeves), breasts=True, hips_extra=0.012 * s)
     ob = S.to_object(f'{prefix}_shirt', col)
     # sleeves
     if sleeves:
@@ -535,12 +541,12 @@ def trousers(B, col, prefix, mat, length=1.0, off=0.012, waist=None):
     S = Shape()
     hw = B.hw
     waist = waist if waist is not None else z['hip'] + 0.09 * s
-    torso_shell(S, B, off * 0.7, z['crotch'] - 0.01 * s, waist, n=8, deltoids=False, breasts=False)
+    torso_shell(S, B, off * 0.7, z['crotch'] - 0.01 * s, waist, n=8, deltoids=False, breasts=False, hips_extra=0.012 * s)
     for sd in (-1, 1):
         hp = B.mirror(B.hip, sd); kn = B.mirror(B.knee, sd); an = B.mirror(B.ankle, sd)
-        pts = [hp + (kn - hp) * t for t in (-0.02, 0.3, 0.6, 1.0)]
-        rr = [0.092 * hw * B.bulk, 0.086 * B.bulk, 0.074 * B.bulk, 0.062]
-        rr2 = [0.095 * B.bulk, 0.09 * B.bulk, 0.078 * B.bulk, 0.064]
+        pts = [hp + (kn - hp) * t for t in (0.12, 0.35, 0.6, 1.0)]
+        rr = [0.084 * hw * B.bulk, 0.084 * B.bulk, 0.074 * B.bulk, 0.062]
+        rr2 = [0.09 * B.bulk, 0.09 * B.bulk, 0.078 * B.bulk, 0.064]
         if length > 0.5:
             L = (length - 0.5) / 0.5
             pts += [kn + (an - kn) * t for t in (0.3, 0.65, L)]
@@ -756,7 +762,7 @@ def build_all():
     passenger_seat(chars['PASSENGER'])
     A.make_seated_pose(chars['PASSENGER']['arm'], frame=1)
     chars['DIVER'] = build_character('DIVER', height=1.76, female=False, bulk=1.05, skin=(0.16, 0.08, 0.045, 1), hair='short',
-                                     outfit=dict(shirt=cloth_material('MAT_wetsuit', (0.01, 0.01, 0.012, 1), 0.45, 0.2), sleeves='long', hem=0.75, neck=True,
+                                     outfit=dict(shirt=cloth_material('MAT_wetsuit', (0.01, 0.01, 0.012, 1), 0.45, 0.2), sleeves='long', hem=None, neck=True,
                                                  trousers=cloth_material('MAT_wetsuit', (0.01, 0.01, 0.012, 1), 0.45, 0.2), length=1.0, waist=1.0,
                                                  shoes=P.new_mat('MAT_bootie', (0.015, 0.015, 0.015, 1), 0.5)))
     diver_extras(chars['DIVER'])

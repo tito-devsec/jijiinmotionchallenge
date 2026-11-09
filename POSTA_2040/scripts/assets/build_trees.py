@@ -284,6 +284,14 @@ def grow_tree(tm, rng, prm):
                 c = pp + off
                 facing = Vector((c.x, c.y, (c.z - env_c.z) * env_rx / env_rz))
                 tm.crossed_cards(c, prm['card_size'] * rng.uniform(0.75, 1.25), rng, tilt=prm.get('card_tilt', 0.6), facing=facing)
+            # fill: cloud of cards around the tip so the canopy reads as a continuous volume
+            tip = pts[-1]
+            for i in range(prm.get('tip_cards', 0)):
+                off = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-0.8, 0.6))).normalized() * rng.uniform(0.2, prm.get('tip_r', 0.7))
+                c = tip + off
+                if ray_ellipsoid_scale(c, Vector((0, 0, 1)), env_c, env_rx, env_rz) in (None, 0.0): continue
+                facing = Vector((c.x, c.y, (c.z - env_c.z) * env_rx / env_rz))
+                tm.crossed_cards(c, prm['card_size'] * rng.uniform(0.7, 1.1), rng, tilt=prm.get('card_tilt', 0.6), facing=facing)
 
     # trunk(s)
     for tk in prm.get('trunks', [((0, 0, 0), (0, 0, 1), 1.0)]):
@@ -297,7 +305,7 @@ def grow_tree(tm, rng, prm):
     if prm.get('flare', True):
         for tk in prm.get('trunks', [((0, 0, 0), (0, 0, 1), 1.0)]):
             b = Vector(tk[0]); r = prm['trunk_r'] * tk[2]
-            tm.tube([b - Vector((0, 0, 0.05)), b + Vector((0, 0, 0.25)), b + Vector((0, 0, 0.7))], [r * 1.55, r * 1.2, r * 1.02], seg=prm['level'][0]['ring'], cap=False)
+            tm.tube([b - Vector((0, 0, 0.05)), b + Vector((0, 0, 0.25)), b + Vector((0, 0, 0.7))], [r * 1.55, r * 1.18, r * 0.995], seg=prm['level'][0]['ring'], cap=False)
     return branches
 
 # ----------------------------------------------------------------------------- species parameters
@@ -306,28 +314,28 @@ def L(segs, ring, taper, jitter, gravity, photo, children, child_start, child_an
 
 SPECIES_PARAMS = {
     # columnar / oval broadleaf (lineup, 2nd-4th trees): straight trunk, canopy 2.8..10 m, oval
-    'BROADLEAF_A': dict(seed=101, trunk_len=4.2, trunk_r=0.2, levels=4, leaf_level=2, env=(6.6, 2.7, 3.7), cards_per_m=16, card_size=0.6, card_tilt=0.7,
+    'BROADLEAF_A': dict(seed=101, trunk_len=4.2, trunk_r=0.2, levels=4, leaf_level=2, env=(6.6, 2.7, 3.7), cards_per_m=14, card_size=0.6, card_tilt=0.7, tip_cards=5, tip_r=0.7,
         leaf_tex='leaves_broad.png', bark_tex='bark_broad.png', bark_tint=(0.75, 0.72, 0.68, 1),
         level=[L(7, 12, 0.55, 0.05, 0.0, 0.3, (9, 12), 0.5, (35, 60), (0.75, 1.05), 0.6),
                L(5, 8, 0.4, 0.14, -0.02, 0.25, (5, 7), 0.3, (30, 55), (0.55, 0.8), 0.6),
                L(4, 5, 0.35, 0.22, -0.05, 0.12, (4, 6), 0.25, (30, 60), (0.5, 0.75), 0.55),
                L(3, 4, 0.3, 0.3, -0.08, 0.0, (0, 0), 0.3, (30, 60), (0.5, 0.7), 0.5)]),
     # rounder spreading broadleaf (lineup 1st / 5th tree): lower fork, broad crown
-    'BROADLEAF_B': dict(seed=202, trunk_len=3.2, trunk_r=0.23, levels=4, leaf_level=2, env=(6.4, 3.7, 3.5), cards_per_m=15, card_size=0.65, card_tilt=0.7,
+    'BROADLEAF_B': dict(seed=202, trunk_len=3.2, trunk_r=0.23, levels=4, leaf_level=2, env=(6.4, 3.7, 3.5), cards_per_m=13, card_size=0.65, card_tilt=0.7, tip_cards=5, tip_r=0.75,
         leaf_tex='leaves_broad2.png', bark_tex='bark_broad.png', bark_tint=(0.7, 0.68, 0.66, 1),
         level=[L(6, 12, 0.6, 0.06, 0.0, 0.2, (7, 9), 0.55, (40, 70), (0.9, 1.3), 0.6),
                L(5, 8, 0.42, 0.14, -0.03, 0.3, (5, 7), 0.3, (30, 60), (0.55, 0.85), 0.6),
                L(4, 5, 0.35, 0.22, -0.06, 0.12, (4, 6), 0.25, (30, 65), (0.5, 0.75), 0.55),
                L(3, 4, 0.3, 0.3, -0.08, 0.0, (0, 0), 0.3, (30, 60), (0.5, 0.7), 0.5)]),
     # dense round mango: short thick dark trunk, 4-6 scaffolds, very dense canopy almost to the ground
-    'MANGO': dict(seed=303, trunk_len=2.2, trunk_r=0.32, levels=4, leaf_level=2, env=(6.3, 4.4, 3.9), cards_per_m=18, card_size=0.62, card_tilt=0.6, fruit=60,
+    'MANGO': dict(seed=303, trunk_len=2.2, trunk_r=0.32, levels=4, leaf_level=2, env=(6.3, 4.4, 3.9), cards_per_m=14, card_size=0.62, card_tilt=0.6, fruit=60, tip_cards=8, tip_r=0.9,
         leaf_tex='leaves_mango.png', bark_tex='bark_mango.png', bark_tint=(0.6, 0.55, 0.55, 1),
         level=[L(4, 14, 0.75, 0.05, 0.0, 0.0, (6, 7), 0.5, (35, 60), (1.6, 2.2), 0.62),
                L(5, 8, 0.45, 0.12, -0.02, 0.2, (5, 7), 0.3, (30, 60), (0.6, 0.9), 0.6),
                L(4, 5, 0.35, 0.2, -0.05, 0.1, (4, 6), 0.25, (30, 65), (0.55, 0.8), 0.55),
                L(3, 4, 0.3, 0.3, -0.1, 0.0, (0, 0), 0.3, (30, 60), (0.5, 0.7), 0.5)]),
     # spreading mango: fork at 1.3 m into 3 leaders, crown wider than tall, hanging fruit
-    'MANGO_SPREAD': dict(seed=404, trunk_len=1.3, trunk_r=0.32, levels=4, leaf_level=2, env=(6.4, 5.6, 3.6), cards_per_m=16, card_size=0.62, card_tilt=0.6, fruit=90, fruit_hang=True,
+    'MANGO_SPREAD': dict(seed=404, trunk_len=1.3, trunk_r=0.32, levels=4, leaf_level=2, env=(6.4, 5.6, 3.6), cards_per_m=14, card_size=0.62, card_tilt=0.6, fruit=90, fruit_hang=True, tip_cards=7, tip_r=0.85,
         leaf_tex='leaves_mango.png', bark_tex='bark_mango.png', bark_tint=(0.72, 0.68, 0.62, 1),
         level=[L(3, 14, 0.85, 0.03, 0.0, 0.0, (3, 3), 0.9, (30, 45), (2.4, 3.0), 0.7),
                L(6, 8, 0.4, 0.1, -0.03, 0.1, (6, 8), 0.3, (35, 65), (0.55, 0.85), 0.6),
@@ -389,7 +397,7 @@ def build_conifer(tm, rng):
     while z < H - 0.35:
         f = (z - 1.3) / (H - 1.3)
         n = rng.randint(7, 9) if f < 0.7 else rng.randint(5, 7)
-        Lb = 1.9 * (1 - f) ** 0.85 + 0.25
+        Lb = 2.2 * (1 - f) ** 0.85 + 0.3
         for k in range(n):
             roll += 2 * math.pi / n + rng.uniform(-0.25, 0.25)
             pp, pd, pr = point_on(trunk_pts, trunk_r, z / H)
@@ -399,7 +407,7 @@ def build_conifer(tm, rng):
             pts, radii = grow_branch(rng, pp, d, length, min(pr * 0.45, 0.06), 0.008, 4, 0.03, -0.03, 0.08)  # droop then tips lift
             tm.tube(pts, radii, seg=5)
             # needle cards along the branch: flat, oriented along the branch; side sprays
-            ncard = max(2, int(length / 0.26))
+            ncard = max(2, int(length / 0.22))
             for i in range(ncard):
                 t = (i + 0.5) / ncard
                 qp, qd, qr = point_on(pts, radii, t)
@@ -424,7 +432,7 @@ def build_conifer(tm, rng):
         tm.card(tip - Vector((0, 0, 0.1)), right, Vector((0, 0, 1)), 0.45, 0.7, rnd, anchor=0.5)
     return []
 
-def build_palm(tm, rng, fronds=13, H=8.6):
+def build_palm(tm, rng, fronds=14, H=8.2):
     """Coconut palm: curved ringed trunk, arching fronds built from a rib and many leaflet quads, coconuts."""
     lean = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), 0)).normalized()
     pts = []; radii = []; n = 14
@@ -445,15 +453,15 @@ def build_palm(tm, rng, fronds=13, H=8.6):
         age = k / fronds
         elev0 = math.radians(rng.uniform(55, 80) - 85 * (age ** 1.3))
         d = Vector((math.cos(roll) * math.cos(elev0), math.sin(roll) * math.cos(elev0), math.sin(elev0)))
-        Lf = rng.uniform(4.2, 5.2)
+        Lf = rng.uniform(5.0, 6.0)
         rib, rr = grow_branch(rng, crown_c, d, Lf, 0.07, 0.015, 8, 0.01, -0.16 if age < 0.85 else -0.22, 0.0)
         tm.tube(rib, rr, seg=5)
         # leaflets
-        nl = 34
+        nl = 40
         for i in range(nl):
             t = 0.22 + 0.78 * (i / nl)
             qp, qd, qr = point_on(rib, rr, t)
-            llen = (1.05 * math.sin(math.pi * min(1, (t - 0.15) / 0.9)) ** 0.5 + 0.2) * (1 - 0.45 * max(0, t - 0.75) / 0.25)
+            llen = (1.25 * math.sin(math.pi * min(1, (t - 0.15) / 0.9)) ** 0.5 + 0.2) * (1 - 0.45 * max(0, t - 0.75) / 0.25)
             for side in (-1, 1):
                 sidev = qd.cross(Vector((0, 0, 1))).normalized() * side
                 # leaflet dir: forward along rib, outward to the side, drooping
@@ -463,7 +471,7 @@ def build_palm(tm, rng, fronds=13, H=8.6):
                 rnd = (rng.random(), rng.random() * 0.5 + 0.3, 0.5)
                 c = qp + ld * llen * 0.5 + sidev * 0.02
                 # quad: along ld (u = 0..1 along blade), width across
-                w = 0.09 + 0.03 * (1 - t)
+                w = 0.11 + 0.04 * (1 - t)
                 bm = tm.leaf
                 a0 = qp + sidev * 0.02; a1 = a0 + ld * llen
                 perp = ld.cross(right).normalized() * (w / 2)
@@ -508,7 +516,7 @@ def add_fruit(tm, rng, branches, n, hang=False):
         tm.sphere(c, 0.075, rng.random(), scale=(0.85, 0.85, 1.2), subdiv=1)
 
 def palm_leaf_material():
-    m = leaf_material('MAT_PalmLeaflet', 'palm_leaflet.png', tint=(1, 1, 1, 1), translucency=0.3, rough=0.4, hue_var=0.04)
+    m = leaf_material('MAT_PalmLeaflet', 'palm_leaflet.png', tint=(0.5, 0.66, 0.38, 1), translucency=0.3, rough=0.4, hue_var=0.04)
     # dead fronds: leafrand R ~0.95 & G ~0.05 -> brown. Patch the hue node: use G channel as saturation driver
     nt = m.node_tree
     hsv = next(n for n in nt.nodes if n.type == 'HUE_SAT'); sep = next(n for n in nt.nodes if n.type == 'SEPARATE_COLOR')
@@ -592,7 +600,7 @@ def preview_lineup(out=os.path.join(PREVIEWS, 'asset_trees_lineup.png'), samples
         col = bpy.data.collections[f'TREE_{name}']
         for o in col.objects:
             if o.parent is None: o.location = ((i - (n - 1) / 2) * spacing, 0, 0)
-    P.setup_world(sun_rot=(math.radians(52), 0, math.radians(-35)), sun_energy=3.5, sky=True, sky_strength=0.7, sun_elev=48, sun_az=215)
+    P.setup_world(sun_rot=(math.radians(52), 0, math.radians(-35)), sun_energy=3.5, sky=True, sky_strength=0.7, turbidity=1.2, sun_elev=48, sun_az=215)
     P.setup_render((1280, 720), samples=samples, out=out)
     sc.cycles.transparent_max_bounces = 16
     P.add_camera('CAM_lineup', loc=(4, -80, 8.5), target=(0, 0, 5.4), lens=35)

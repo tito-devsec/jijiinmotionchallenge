@@ -57,10 +57,10 @@ M_ANEM = coral_mat('MAT_Anemone', (0.6, 0.25, 0.7, 1), (1.0, 0.55, 0.85, 1), 0.5
 M_ANEM_BASE = coral_mat('MAT_AnemoneBase', (0.55, 0.3, 0.15, 1), (0.6, 0.4, 0.2, 1), 0.3, 0.6)
 
 def sand_mat():
-    m = P.new_mat('MAT_Sand', (0.78, 0.7, 0.52, 1), 0.9); nt = m.node_tree; b = nt.nodes['Principled BSDF']
+    m = P.new_mat('MAT_Sand', (0.6, 0.52, 0.36, 1), 0.9); nt = m.node_tree; b = nt.nodes['Principled BSDF']
     tc = nt.nodes.new('ShaderNodeTexCoord'); nz = nt.nodes.new('ShaderNodeTexNoise'); nz.inputs['Scale'].default_value = 2.0; nz.inputs['Detail'].default_value = 6.0; nz.inputs['Roughness'].default_value = 0.75
     nt.links.new(tc.outputs['Object'], nz.inputs['Vector'])
-    ramp = nt.nodes.new('ShaderNodeValToRGB'); ramp.color_ramp.elements[0].color = (0.62, 0.55, 0.38, 1); ramp.color_ramp.elements[1].color = (0.9, 0.84, 0.66, 1)
+    ramp = nt.nodes.new('ShaderNodeValToRGB'); ramp.color_ramp.elements[0].color = (0.45, 0.38, 0.25, 1); ramp.color_ramp.elements[1].color = (0.72, 0.64, 0.46, 1)
     nt.links.new(nz.outputs['Fac'], ramp.inputs[0]); nt.links.new(ramp.outputs[0], b.inputs['Base Color'])
     v = nt.nodes.new('ShaderNodeTexVoronoi'); v.inputs['Scale'].default_value = 120.0; nt.links.new(tc.outputs['Object'], v.inputs['Vector'])
     bp = nt.nodes.new('ShaderNodeBump'); bp.inputs['Strength'].default_value = 0.25; bp.inputs['Distance'].default_value = 0.01
@@ -244,10 +244,10 @@ def build_reef_head(col):
         r = 1 + 0.5 * big + 0.25 * big2 + 0.12 * mid + 0.08 * (ridged - 1.0) - 0.28 * crev
         r *= 1 + 0.5 * max(0.0, -n.z) ** 1.5 + 0.15 * max(0.0, n.z) ** 3   # skirt at the base, small cap on top
         v.co = n * R * r
-    bmesh.ops.transform(bm, matrix=Matrix.Diagonal((1.45, 0.95, 1.25, 1)), verts=vs)
+    bmesh.ops.transform(bm, matrix=Matrix.Diagonal((1.35, 0.95, 1.4, 1)), verts=vs)
     zs = [v.co.z for v in vs]; zmin, zmax = min(zs), max(zs)
     for v in vs:
-        v.co.z = (v.co.z - zmin) / (zmax - zmin) * 7.4 - 0.8 - DEPTH   # ~6.6 m above the seabed, 0.8 m buried
+        v.co.z = (v.co.z - zmin) / (zmax - zmin) * 8.2 - 0.8 - DEPTH   # ~7.4 m above the seabed, 0.8 m buried
     for f in bm.faces: f.smooth = True
     o = K.obj_from_bm('REEF_HEAD', bm, col, [M_ROCK])
     return o
@@ -481,7 +481,7 @@ mBub = bub.modifiers.new('Bubbles', 'NODES'); mBub.node_group = gn_bub
 set_inputs(mBub, {'Count': 70, 'Height': DEPTH - 0.4, 'Radius': 0.25, 'Speed': 1.2, 'Size': 0.035, 'Material': M_BUBBLE}); drive_time(mBub)
 
 uw = U.setup_underwater(sc, depth=DEPTH)
-gobo = U.add_light_shafts(sc, depth=DEPTH, count=18, radius=24.0, sun_tilt=22.0, sun_az=35.0)
+gobo = U.add_light_shafts(sc, depth=DEPTH, count=28, radius=26.0, sun_tilt=22.0, sun_az=35.0)
 sc.frame_set(1)
 
 for n, c in bpy.data.collections.items():
@@ -514,8 +514,8 @@ if not NORENDER:
         for name in ('REEF', 'FISH_SCHOOLS', 'LIGHT_SHAFTS'): vl.layer_collection.children[name].exclude = False
         for o in (uw['volume'], uw['surface'], gobo, uw['caustic']): o.hide_render = False
         ko.hide_render = True; fo.hide_render = True
-        cam2 = P.add_camera('CAM_REEF', loc=(-9.5, -12.5, -DEPTH + 1.9), target=(0.6, 0.3, -DEPTH + 4.8), lens=22)
+        cam2 = P.add_camera('CAM_REEF', loc=(-9.5, -12.5, -DEPTH + 1.9), target=(0.6, 0.3, -DEPTH + 5.2), lens=22)
         sc.camera = cam2; sc.render.filepath = os.path.join(PREVIEWS, 'asset_reef.png')
-        sc.view_settings.exposure = 0.0
+        sc.view_settings.exposure = -0.4
         bpy.ops.render.render(write_still=True)
     print('[uw] previews done')
