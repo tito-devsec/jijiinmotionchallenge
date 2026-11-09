@@ -66,6 +66,36 @@ synthesis · FFmpeg. Related forks maintained by the author for this pipeline:
 [artcraft](https://github.com/tito-devsec/artcraft), [effectcraft](https://github.com/tito-devsec/effectcraft),
 [photocraft](https://github.com/tito-devsec/photocraft).
 
+## Reproduce the film
+
+Requirements: Blender 4.5 LTS (headless is fine), Python 3 with NumPy and Pillow, FFmpeg.
+
+```bash
+# 1. city from the OSM export (original preserved untouched), DEM fixes, 2040 towers, trees
+blender -b --python POSTA_2040/scripts/city_generation/build_city_base.py
+blender -b --python POSTA_2040/scripts/city_generation/fix_water_level.py
+blender -b --python POSTA_2040/scripts/city_generation/flatten_terrain.py
+blender -b --python POSTA_2040/scripts/city_generation/build_future_city.py
+blender -b --python POSTA_2040/scripts/city_generation/lift_roads.py
+# 2. assets
+for a in phone roadster helicopter characters construction underwater trees; do blender -b --python POSTA_2040/scripts/assets/build_$a.py; done
+blender -b --python POSTA_2040/scripts/city_generation/place_trees.py
+# 3. sound design and music
+python3 POSTA_2040/scripts/audio/synth_sound_design.py
+# 4. render + edit (preview pass, then final)
+POSTA_2040/scripts/rendering/render_film.sh preview
+POSTA_2040/scripts/rendering/render_film.sh final
+```
+
+Outputs: `POSTA_2040/renders/JIJI_IN_MOTION_final.mp4`, per-scene review clips in `POSTA_2040/renders/clips/`.
+Documentation: `POSTA_2040/documentation/` (asset audit, pipeline, map comparison, scene guide).
+
+## Campaign pillars
+
+- **01 Maisha ya miji ya TZ** — the real Posta map, Kivukoni Front, the harbour and its ferry, palms and mango trees.
+- **02 Rangi za HOT 70** — the palette and grade follow the HOT 70 colourways.
+- **03 Mtazamo na ubunifu wako** — a streetwear hero styled after the campaign poster, collage title cards and the author's credit.
+
 ## Licence
 
 - **Source code** (`scripts/`, `shaders/`, `tools/`): GNU GPL v3.0 or later — see `LICENSE`.
