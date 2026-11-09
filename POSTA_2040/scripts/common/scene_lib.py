@@ -311,7 +311,7 @@ def import_node_group(blend, name):
     with bpy.data.libraries.load(os.path.join(P.ROOT, 'blender', 'assets', blend), link=False) as (src, dst): dst.node_groups = [name]
     return bpy.data.node_groups[name]
 
-def screen_sequence(mat_name='MAT_PhoneScreen', seq_dir=None, first=1, count=None, offset=0, strength=3.5):
+def screen_sequence(mat_name='MAT_PhoneScreen', seq_dir=None, first=1, count=None, offset=0, strength=3.5, flip=False):
     """Feed an image sequence into the phone screen emission."""
     import glob as _g
     if seq_dir and os.environ.get('POSTA_SCREEN_DIR'): seq_dir = os.environ['POSTA_SCREEN_DIR']
@@ -326,8 +326,11 @@ def screen_sequence(mat_name='MAT_PhoneScreen', seq_dir=None, first=1, count=Non
     if not tex.inputs['Vector'].is_linked:
         tc = nt.nodes.new('ShaderNodeTexCoord'); sep = nt.nodes.new('ShaderNodeSeparateXYZ'); cmb = nt.nodes.new('ShaderNodeCombineXYZ')
         inv = nt.nodes.new('ShaderNodeMath'); inv.operation = 'SUBTRACT'; inv.inputs[0].default_value = 1.0
-        nt.links.new(tc.outputs['Generated'], sep.inputs[0]); nt.links.new(sep.outputs['Y'], inv.inputs[1])
-        nt.links.new(inv.outputs[0], cmb.inputs['X']); nt.links.new(sep.outputs['X'], cmb.inputs['Y'])
+        nt.links.new(tc.outputs['Generated'], sep.inputs[0])
+        if flip:   # phone held the other way round (cabin): rotate the picture 180 degrees so it stays upright to the viewer
+            nt.links.new(sep.outputs['X'], inv.inputs[1]); nt.links.new(sep.outputs['Y'], cmb.inputs['X']); nt.links.new(inv.outputs[0], cmb.inputs['Y'])
+        else:
+            nt.links.new(sep.outputs['Y'], inv.inputs[1]); nt.links.new(inv.outputs[0], cmb.inputs['X']); nt.links.new(sep.outputs['X'], cmb.inputs['Y'])
         nt.links.new(cmb.outputs[0], tex.inputs['Vector'])
     b = next(n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'); nt.links.new(tex.outputs[0], b.inputs['Emission Color']); b.inputs['Emission Strength'].default_value = strength
     return True

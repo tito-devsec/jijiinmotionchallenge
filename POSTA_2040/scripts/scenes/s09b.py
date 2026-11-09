@@ -11,7 +11,7 @@ def build(scn, quality):
     S.world_bluehour(sun_energy=0.3, strength=0.55)
     S.enable_mist(start=400, depth=3000, color=(0.1, 0.1, 0.2, 1), strength=0.35)
     heli, seat = S.hover_helicopter(F); rig, phone = S.cabin_passenger(seat, F)
-    S.screen_sequence(seq_dir=os.path.join(P.ROOT, 'renders', 's09_ui'), strength=2.6, offset=168)
+    S.screen_sequence(seq_dir=os.path.join(P.ROOT, 'renders', 's09_ui'), strength=2.6, flip=True, offset=168)
     bpy.context.view_layer.update()
     A = S.seat_cams(seat, rig, phone); inv = seat.matrix_world.inverted()
     to_seat = lambda v: inv @ (phone.matrix_world @ Vector(v))
