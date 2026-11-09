@@ -52,7 +52,7 @@ def clear_real_trees_near(points, radius=12.0, collection='CITY_TREES_REAL'):
     pts = [Vector((p[0], p[1])) for p in points]
     removed = 0
     for o in tree_instances(collection):
-        xy = Vector((o.matrix_world.translation.x, o.matrix_world.translation.y))
+        xy = Vector((o.location.x, o.location.y))  # instances are unparented; matrix_world may be stale before a depsgraph update
         if any((xy - p).length < radius for p in pts):
             bpy.data.objects.remove(o); removed += 1
     return removed

@@ -181,6 +181,7 @@ def enable_mist(start=200, depth=1500, color=(0.35, 0.5, 0.8, 1), strength=0.7):
     except Exception:
         glare.threshold = 1.2
     nt.links.new(mix.outputs[0], glare.inputs[0]); nt.links.new(glare.outputs[0], comp.inputs[0])
+    add_grade()
 
 def terrain_urban_material():
     """Urban ground: concrete/paving mixed with grass patches by large-scale noise."""
@@ -197,3 +198,50 @@ def snap_to_road(x, y):
     o = bpy.data.objects['CITY_ROAD']; co = np.empty(len(o.data.vertices) * 3); o.data.vertices.foreach_get('co', co); co = co.reshape(-1, 3)
     co = co[co[:, 2] > 2.5]  # keep land roads only (piers excluded)
     i = np.hypot(co[:, 0] - x, co[:, 1] - y).argmin(); return (float(co[i, 0]), float(co[i, 1]), float(co[i, 2]))
+
+def add_ferry(name='FERRY', start=(60, -60), end=(400, -300), F=200, z=0.4, speed_frames=None):
+    """Kigamboni-style passenger ferry (procedural): white hull, blue band, two-deck superstructure, wheelhouse, funnel.
+    Crosses the harbour from start to end over the scene."""
+    import bmesh
+    from mathutils import Vector
+    bm = bmesh.new()
+    # hull: lofted box with pointed bow
+    L, Wd, Hh = 42.0, 11.0, 3.2
+    hull = bmesh.ops.create_cube(bm, size=1.0)['verts']
+    for v in hull:
+        v.co = Vector((v.co.x * Wd, v.co.y * L, (v.co.z + 0.5) * Hh))
+        if v.co.y > 0: v.co.x *= 0.35; v.co.y += 4.0
+    deck = bmesh.ops.create_cube(bm, size=1.0)['verts']
+    for v in deck: v.co = Vector((v.co.x * Wd * 0.9, v.co.y * L * 0.7 - 2, Hh + (v.co.z + 0.5) * 3.0))
+    deck2 = bmesh.ops.create_cube(bm, size=1.0)['verts']
+    for v in deck2: v.co = Vector((v.co.x * Wd * 0.8, v.co.y * L * 0.55 - 3, Hh + 3.0 + (v.co.z + 0.5) * 2.8))
+    wh = bmesh.ops.create_cube(bm, size=1.0)['verts']
+    for v in wh: v.co = Vector((v.co.x * Wd * 0.5, v.co.y * 6 + 6, Hh + 5.8 + (v.co.z + 0.5) * 2.6))
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=12, radius1=1.0, radius2=0.8, depth=4.0, matrix=__import__('mathutils').Matrix.Translation((0, -9, Hh + 5.8 + 2.0)))
+    me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
+    ob = bpy.data.objects.new(name, me); bpy.context.scene.collection.objects.link(ob)
+    white = P.new_mat('MAT_FerryWhite', (0.85, 0.86, 0.84, 1), 0.4); blue = P.new_mat('MAT_FerryBlue', P.PAL['blue'], 0.4)
+    me.materials.append(white); me.materials.append(blue)
+    for p in me.polygons:
+        c = me.vertices[p.vertices[0]].co.z
+        p.material_index = 1 if c < Hh * 0.6 else 0
+    ang = math.atan2(end[1] - start[1], end[0] - start[0]) - math.pi / 2
+    ob.rotation_euler = (0, 0, ang)
+    ob.location = (start[0], start[1], z); ob.keyframe_insert('location', frame=1)
+    ob.location = (end[0], end[1], z); ob.keyframe_insert('location', frame=speed_frames or F)
+    for fc in ob.animation_data.action.fcurves:
+        for kp in fc.keyframe_points: kp.interpolation = 'LINEAR'
+    # wake: flat white translucent strip trailing the hull
+    bpy.ops.mesh.primitive_plane_add(size=1, location=(0, 0, 0)); wk = bpy.context.object; wk.name = name + '_WAKE'
+    wk.scale = (Wd * 0.8, L * 1.6, 1); wk.location = (0, -L * 1.0, 0.05); wk.parent = ob
+    wk.data.materials.append(P.new_mat('MAT_Wake', (1, 1, 1, 1), 0.6, alpha=0.35))
+    return ob
+
+def add_grade(shadows=(0.98, 1.0, 1.05), midtones=(1.0, 1.0, 1.0), highlights=(1.04, 1.01, 0.96)):
+    """HOT 70 palette grade in the compositor: cool teal-blue shadows, warm highlights. Inserts a Color Balance before the Composite."""
+    sc = bpy.context.scene; sc.use_nodes = True; nt = sc.node_tree
+    comp = next(n for n in nt.nodes if n.type == 'COMPOSITE'); src = comp.inputs[0].links[0].from_socket if comp.inputs[0].links else None
+    if src is None: return
+    cb = nt.nodes.new('CompositorNodeColorBalance'); cb.correction_method = 'LIFT_GAMMA_GAIN'
+    cb.lift = tuple(shadows); cb.gamma = tuple(midtones); cb.gain = tuple(highlights)
+    nt.links.new(src, cb.inputs['Image']); nt.links.new(cb.outputs[0], comp.inputs[0])

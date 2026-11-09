@@ -6,7 +6,7 @@ from mathutils import Vector
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 FONT_MONO = '/usr/share/fonts/truetype/jetbrains-mono/JetBrainsMono-Bold.ttf'
-FONT_SANS = '/usr/share/fonts/truetype/inter/InterDisplay-Bold.ttf'
+FONT_SANS = '/usr/share/fonts/opentype/inter/InterDisplay-Bold.otf'
 
 def hex2rgb(h, a=1.0):
     h = h.lstrip('#'); r, g, b = (int(h[i:i+2], 16) / 255 for i in (0, 2, 4))
@@ -23,7 +23,7 @@ def find_font(candidates):
     for c in candidates:
         if os.path.exists(c): return c
     import glob
-    for pat in ('/usr/share/fonts/**/*JetBrainsMono*Bold*.ttf', '/usr/share/fonts/**/*Inter*Bold*.ttf', '/usr/share/fonts/**/DejaVuSans-Bold.ttf'):
+    for pat in ('/usr/share/fonts/**/*JetBrainsMono*Bold*.ttf', '/usr/share/fonts/**/InterDisplay-Bold.otf', '/usr/share/fonts/**/Inter-Bold.otf', '/usr/share/fonts/**/DejaVuSans-Bold.ttf'):
         g = glob.glob(pat, recursive=True)
         if g: return g[0]
     return None

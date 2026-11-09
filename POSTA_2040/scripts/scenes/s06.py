@@ -24,6 +24,7 @@ def build(scn, quality):
     S.fresh(); F = scn['frames']
     objs = S.load_city('binary', crop=((50, 60), 900), future=True); S.ocean_material_upgrade(dusk=False)
     S.apply_future_materials(objs); S.terrain_urban_material()
+    S.add_ferry(start=(120, -40), end=(520, -420), F=F)
     # the dissolving materials are replaced by future ones; binary modifier runs backwards so glyphs resolve into glass and steel
     b = objs['CITY_BUILDING']; mb = P.apply_binary(b, progress=1.0, density=0.15, size=1.4, noise_scale=0.02, seed=3, height_bias=0.5, band=0.15)
     S.key_progress(mb, [(1, 1.0), (int(F * 0.45), 0.0), (F, 0.0)]); S.drive_flow(mb, speed=0.8)

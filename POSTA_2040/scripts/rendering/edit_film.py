@@ -12,16 +12,19 @@ XF = 0.5  # crossfade seconds between scenes
 def run(cmd): print(' '.join(cmd) if isinstance(cmd, list) else cmd); subprocess.run(cmd, check=True)
 
 clips = []
-for s in cfg['scenes']:
+# title cards (pre-rendered at 24 fps by brand_cards.py) bracket the film
+cards = [{'id': 'card_open', 'title': 'Opening card', 'frames': 72}] + cfg['scenes'] + [{'id': 'card_close', 'title': 'Closing card', 'frames': 120}]
+for s in cards:
     d = os.path.join(R, s['id']); frames = sorted(glob.glob(os.path.join(d, 'f_*.png')))
+    this_step = 1 if s['id'].startswith('card') else step
     if not frames: print('MISSING', s['id']); continue
     lst = os.path.join(TMP, f"{s['id']}.txt")
     with open(lst, 'w') as f:
-        for p in frames: f.write(f"file '{p}'\nduration {step / FPS}\n")
+        for p in frames: f.write(f"file '{p}'\nduration {this_step / FPS}\n")
         f.write(f"file '{frames[-1]}'\n")
     out = os.path.join(TMP, f"{s['id']}.mp4")
     vf = f"scale={W}:{H}:flags=lanczos,format=yuv420p"
-    if step > 1: vf = f"minterpolate=fps={FPS}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1," + vf
+    if this_step > 1: vf = f"minterpolate=fps={FPS}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1," + vf
     run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', lst, '-vf', vf, '-r', str(FPS), '-c:v', 'libx264', '-preset', 'medium', '-crf', '17', out])
     clips.append((s, out))
 
@@ -52,7 +55,7 @@ plan = [  # (stem, scene id, offset within scene, gain dB)
     ('stems/s08_camera_ui.wav', 's08', 1.0, -10), ('stems/s08_lens_dive.wav', 's08', 5.5, -6),
     ('stems/s10_fall_splash.wav', 's10', 0.0, -6), ('stems/s11_underwater.wav', 's11', 0.0, -7),
     ('stems/s12_diver.wav', 's12', 0.0, -7), ('stems/s13_ui_share.wav', 's13', 2.0, -10), ('stems/s14_brand_sting.wav', 's14', 0.0, -4),
-    ('music/music_bed.wav', 's01', 0.0, -9),
+    ('music/music_bed.wav', 'card_open', 0.0, -9),
 ]
 ain = []; af = []; mixin = []
 for i, (stem, sid, off, g) in enumerate(plan):

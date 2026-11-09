@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 mode, src, dst = sys.argv[1], sys.argv[2], sys.argv[3]; os.makedirs(dst, exist_ok=True)
 def font(sz, bold=True):
-    for p in ('/usr/share/fonts/truetype/inter/Inter-SemiBold.ttf', '/usr/share/fonts/truetype/inter/InterDisplay-SemiBold.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'):
+    for p in ('/usr/share/fonts/opentype/inter/Inter-SemiBold.otf', '/usr/share/fonts/opentype/inter/InterDisplay-SemiBold.otf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'):
         if os.path.exists(p): return ImageFont.truetype(p, sz)
     import glob as g
     c = g.glob('/usr/share/fonts/**/*Inter*', recursive=True) or g.glob('/usr/share/fonts/**/DejaVuSans-Bold.ttf', recursive=True)
