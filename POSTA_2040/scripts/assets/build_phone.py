@@ -295,6 +295,10 @@ for i, y in enumerate(LENS_Y):
         bm = bmesh.new(); prism(bm, circle_points(0.0024, 48), Z_ISL - 0.00076, Z_ISL - 0.00080, offset=off); finish(bm, f'PHONE_LensElement_{i+1}', [MAT_LENS])
         bm = bmesh.new(); dome_disc(bm, 0.0036, Z_ISL - 0.00080, 0.00030, 48, 5, offset=off, flip=True)
         g = finish(bm, 'PHONE_LENS_MAIN' if i == 0 else f'PHONE_LensGlass_{i+1}', [MAT_LENS_GLASS])
+        if i == 0:   # put the object origin at the lens centre so a camera can target / dive through it
+            c = Vector((ISL_X, y, Z_ISL - 0.00080 - 0.00015))
+            for v in g.data.vertices: v.co -= c
+            g.location = c
     else:
         # thick squircle ring with a round dark lens (annulus: outer squircle, inner circle, bridged caps)
         bm = bmesh.new()

@@ -68,7 +68,7 @@ def water_surface_material(name='MAT_WaterSurface', wave_scale=0.08, amp=0.35):
     _linear_extrap(nt)
     return m
 
-def caustic_light(scene, name='UW_CAUSTIC', height=30.0, energy=250000.0, scale=22.0, speed=1.0):
+def caustic_light(scene, name='UW_CAUSTIC', height=30.0, energy=70000.0, scale=22.0, speed=1.0):
     """Wide spot light from above with a node-tree Voronoi caustic net (animated mapping). Needs Cycles."""
     ld = bpy.data.lights.get(name) or bpy.data.lights.new(name, 'SPOT')
     ld.type = 'SPOT'; ld.energy = energy; ld.color = (0.85, 0.95, 1.0); ld.spot_size = math.radians(140); ld.spot_blend = 0.4
@@ -100,7 +100,7 @@ def caustic_light(scene, name='UW_CAUSTIC', height=30.0, energy=250000.0, scale=
     lo.location = (0, 0, height); lo.rotation_euler = (0, 0, 0)   # points -Z
     return lo
 
-def setup_underwater(scene, depth=12.0, size=200.0, density=0.014, anisotropy=0.6, sun_energy=3.5, sun_tilt=22.0, caustic_energy=250000.0):
+def setup_underwater(scene, depth=12.0, size=200.0, density=0.014, anisotropy=0.6, sun_energy=2.5, sun_tilt=22.0, caustic_energy=70000.0):
     """Deep blue-green world, WATER_VOLUME cube, WATER_SURFACE plane at z=0 (wavy glass), UW_SUN and UW_CAUSTIC lights.
     The seabed is expected at z=-depth. Returns dict of created objects."""
     underwater_world(scene)
@@ -129,10 +129,58 @@ def setup_underwater(scene, depth=12.0, size=200.0, density=0.014, anisotropy=0.
         c.transparent_max_bounces = 12; c.transmission_bounces = 8; c.max_bounces = 8
     return {'volume': vol, 'surface': surf, 'sun': sun, 'caustic': caus}
 
-def add_light_shafts(scene, size=120.0, z=1.5, scale=0.1, coverage=0.5, name='UW_SHAFT_GOBO'):
+def shaft_material(name='MAT_LightShaft', strength=0.045):
+    """Emissive volume for god-ray cones: fades toward the bottom, soft radial edge, streaky, drifts over time."""
+    m = bpy.data.materials.get(name) or bpy.data.materials.new(name); m.use_nodes = True; nt = m.node_tree
+    for n in list(nt.nodes): nt.nodes.remove(n)
+    out = nt.nodes.new('ShaderNodeOutputMaterial'); em = nt.nodes.new('ShaderNodeEmission'); em.inputs['Color'].default_value = (0.55, 0.85, 1.0, 1)
+    tc = nt.nodes.new('ShaderNodeTexCoord'); sep = nt.nodes.new('ShaderNodeSeparateXYZ'); nt.links.new(tc.outputs['Object'], sep.inputs[0])
+    # object space: cone runs from z=0 (top, at the surface) to z=-1 (bottom)
+    fade = nt.nodes.new('ShaderNodeMapRange'); fade.inputs['From Min'].default_value = -1.0; fade.inputs['From Max'].default_value = -0.05
+    nt.links.new(sep.outputs['Z'], fade.inputs['Value'])
+    pw = nt.nodes.new('ShaderNodeMath'); pw.operation = 'POWER'; pw.inputs[1].default_value = 1.8; nt.links.new(fade.outputs[0], pw.inputs[0])
+    xy = nt.nodes.new('ShaderNodeCombineXYZ'); nt.links.new(sep.outputs['X'], xy.inputs[0]); nt.links.new(sep.outputs['Y'], xy.inputs[1])
+    rad = nt.nodes.new('ShaderNodeVectorMath'); rad.operation = 'LENGTH'; nt.links.new(xy.outputs[0], rad.inputs[0])
+    edge = nt.nodes.new('ShaderNodeMapRange'); edge.inputs['From Min'].default_value = 1.0; edge.inputs['From Max'].default_value = 0.2
+    nt.links.new(rad.outputs['Value'], edge.inputs['Value'])
+    mp = nt.nodes.new('ShaderNodeMapping'); mp.name = 'ShaftMapping'; nt.links.new(tc.outputs['Object'], mp.inputs['Vector']); mp.inputs['Scale'].default_value = (3.0, 3.0, 0.15)
+    nz = nt.nodes.new('ShaderNodeTexNoise'); nz.inputs['Scale'].default_value = 1.0; nz.inputs['Detail'].default_value = 2.0; nt.links.new(mp.outputs[0], nz.inputs['Vector'])
+    streak = nt.nodes.new('ShaderNodeMapRange'); streak.inputs['From Min'].default_value = 0.35; streak.inputs['From Max'].default_value = 0.7; nt.links.new(nz.outputs['Fac'], streak.inputs['Value'])
+    m1 = nt.nodes.new('ShaderNodeMath'); m1.operation = 'MULTIPLY'; nt.links.new(pw.outputs[0], m1.inputs[0]); nt.links.new(edge.outputs[0], m1.inputs[1])
+    m2 = nt.nodes.new('ShaderNodeMath'); m2.operation = 'MULTIPLY'; nt.links.new(m1.outputs[0], m2.inputs[0]); nt.links.new(streak.outputs[0], m2.inputs[1])
+    m3 = nt.nodes.new('ShaderNodeMath'); m3.operation = 'MULTIPLY'; nt.links.new(m2.outputs[0], m3.inputs[0]); m3.inputs[1].default_value = strength
+    nt.links.new(m3.outputs[0], em.inputs['Strength']); nt.links.new(em.outputs[0], out.inputs['Volume'])
+    mp.inputs['Location'].default_value = (0, 0, 0); mp.inputs['Location'].keyframe_insert('default_value', frame=1)
+    mp.inputs['Location'].default_value = (1.5, 0.8, 0); mp.inputs['Location'].keyframe_insert('default_value', frame=241)
+    _linear_extrap(nt)
+    return m
+
+def add_shaft_cones(scene, depth=12.0, count=16, radius=26.0, sun_tilt=22.0, sun_az=35.0, seed=5, strength=0.045):
+    """`count` emissive-volume cones ('UW_SHAFT_nn' in collection LIGHT_SHAFTS) hanging from the surface, leaning with the sun."""
+    import bmesh, random
+    rnd = random.Random(seed)
+    col = bpy.data.collections.get('LIGHT_SHAFTS') or bpy.data.collections.new('LIGHT_SHAFTS')
+    if col.name not in scene.collection.children: scene.collection.children.link(col)
+    smat = shaft_material(strength=strength); tilt = math.radians(sun_tilt); az = math.radians(sun_az); objs = []
+    for i in range(count):
+        a = rnd.uniform(0, 6.283); rr = radius * math.sqrt(rnd.uniform(0.05, 1.0)); x, y = math.cos(a) * rr, math.sin(a) * rr
+        me = bpy.data.meshes.new(f'UW_SHAFT_{i:02d}'); bm = bmesh.new(); r_top = rnd.uniform(0.5, 1.6)
+        bmesh.ops.create_cone(bm, cap_ends=True, segments=10, radius1=r_top * 0.35, radius2=r_top, depth=1.0)
+        bmesh.ops.translate(bm, vec=(0, 0, -0.5), verts=bm.verts[:])
+        bm.to_mesh(me); bm.free(); me.materials.append(smat)
+        ob = bpy.data.objects.new(me.name, me); col.objects.link(ob)
+        ob.location = (x, y, -0.2); ob.scale = (1, 1, depth * 1.25)
+        ob.rotation_euler = (-tilt * math.cos(az), tilt * math.sin(az), 0)
+        ob.visible_shadow = False; ob.visible_diffuse = False; ob.visible_glossy = False; ob.display_type = 'WIRE'
+        objs.append(ob)
+    return objs
+
+def add_light_shafts(scene, size=120.0, z=1.5, scale=0.1, coverage=0.5, name='UW_SHAFT_GOBO', depth=12.0, count=16, radius=26.0, sun_tilt=22.0, sun_az=35.0, cones=True, strength=0.045):
     """A shadow-only 'gobo' plane above the water surface with noisy holes: the caustic spot and sun shine through
-    the gaps and produce volumetric god rays in WATER_VOLUME. Camera rays ignore it."""
+    the gaps and produce volumetric shadows in WATER_VOLUME; camera rays ignore it. With cones=True also adds readable
+    emissive god-ray cones (see add_shaft_cones). Returns the gobo object."""
     import bmesh
+    if cones: add_shaft_cones(scene, depth, count, radius, sun_tilt, sun_az, strength=strength)
     me = bpy.data.meshes.new(name); bm = bmesh.new(); bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=size / 2); bm.to_mesh(me); bm.free()
     ob = bpy.data.objects.new(name, me); scene.collection.objects.link(ob); ob.location = (0, 0, z)
     m = bpy.data.materials.new('MAT_ShaftGobo'); m.use_nodes = True; nt = m.node_tree

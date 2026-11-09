@@ -481,7 +481,7 @@ mBub = bub.modifiers.new('Bubbles', 'NODES'); mBub.node_group = gn_bub
 set_inputs(mBub, {'Count': 70, 'Height': DEPTH - 0.4, 'Radius': 0.25, 'Speed': 1.2, 'Size': 0.035, 'Material': M_BUBBLE}); drive_time(mBub)
 
 uw = U.setup_underwater(sc, depth=DEPTH)
-gobo = U.add_light_shafts(sc)
+gobo = U.add_light_shafts(sc, depth=DEPTH, count=18, radius=24.0, sun_tilt=22.0, sun_az=35.0)
 sc.frame_set(1)
 
 for n, c in bpy.data.collections.items():
@@ -499,7 +499,7 @@ if not NORENDER:
     res = (640, 360) if QUICK else (1280, 720); smp = 16 if QUICK else 48
     # fish kit: small studio shot (water volume off, world only)
     vl = bpy.context.view_layer
-    for name in ('REEF', 'CORAL_KIT', 'FISH_SCHOOLS'):
+    for name in ('REEF', 'CORAL_KIT', 'FISH_SCHOOLS', 'LIGHT_SHAFTS'):
         vl.layer_collection.children[name].exclude = True
     uw['volume'].hide_render = True; uw['surface'].hide_render = True; gobo.hide_render = True; uw['caustic'].hide_render = True
     kl = bpy.data.lights.new('KEY', 'AREA'); kl.energy = 60; kl.size = 1.5; kl.color = (1.0, 0.97, 0.9); ko = bpy.data.objects.new('KEY', kl); sc.collection.objects.link(ko)
@@ -511,10 +511,10 @@ if not NORENDER:
     sc.cycles.volume_bounces = 1
     bpy.ops.render.render(write_still=True)
     if not FISHONLY:
-        for name in ('REEF', 'FISH_SCHOOLS'): vl.layer_collection.children[name].exclude = False
+        for name in ('REEF', 'FISH_SCHOOLS', 'LIGHT_SHAFTS'): vl.layer_collection.children[name].exclude = False
         for o in (uw['volume'], uw['surface'], gobo, uw['caustic']): o.hide_render = False
         ko.hide_render = True; fo.hide_render = True
-        cam2 = P.add_camera('CAM_REEF', loc=(-8.5, -11.5, -DEPTH + 2.0), target=(0.6, 0.3, -DEPTH + 4.4), lens=22)
+        cam2 = P.add_camera('CAM_REEF', loc=(-9.5, -12.5, -DEPTH + 1.9), target=(0.6, 0.3, -DEPTH + 4.8), lens=22)
         sc.camera = cam2; sc.render.filepath = os.path.join(PREVIEWS, 'asset_reef.png')
         sc.view_settings.exposure = 0.0
         bpy.ops.render.render(write_still=True)
