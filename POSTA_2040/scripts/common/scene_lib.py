@@ -461,14 +461,31 @@ def cabin_passenger(seat, F):
     bpy.context.view_layer.update()
     phone.location = seat.matrix_world.inverted() @ hand + Vector((0.0, 0.06, 0.04))
     # warm cabin practical so the hero reads against the blue-hour exterior
-    ld = bpy.data.lights.new('CABIN_PRACTICAL', 'AREA'); ld.energy = 40; ld.size = 0.8; ld.color = (1.0, 0.82, 0.62)
-    lo = bpy.data.objects.new('CABIN_PRACTICAL', ld); bpy.context.scene.collection.objects.link(lo); lo.parent = seat; lo.location = (0.0, -0.8, 1.2)
-    c = lo.constraints.new('TRACK_TO'); c.target = rig; c.track_axis = 'TRACK_NEGATIVE_Z'; c.up_axis = 'UP_Y'
+    for nm, loc, e, size, col in (('CABIN_PRACTICAL', (0.0, -0.2, 1.4), 160, 0.8, P.HOT70['thermo']),    # warm overhead
+                                  ('CITY_GLOW', (0.0, 2.2, 0.6), 220, 2.5, P.HOT70['violet']),             # skyline glow through the door
+                                  ('PHONE_SPILL', (0.0, 0.5, 0.9), 25, 0.3, P.HOT70['silver'])):          # screen spill on the face
+        ld = bpy.data.lights.new(nm, 'AREA'); ld.energy = e; ld.size = size; ld.color = col[:3]
+        lo = bpy.data.objects.new(nm, ld); bpy.context.scene.collection.objects.link(lo); lo.parent = seat; lo.location = loc
+        c = lo.constraints.new('TRACK_TO'); c.target = rig; c.track_axis = 'TRACK_NEGATIVE_Z'; c.up_axis = 'UP_Y'
     return rig, phone
+
+CBD = (-170.0, 230.0)
+def door_yaw(loc):
+    return math.atan2(CBD[1] - loc[1], CBD[0] - loc[0])
+
+def seat_cams(seat, rig, phone):
+    """Useful seat-local camera anchors inside the cabin (seat +Y points out of the door toward the city)."""
+    inv = seat.matrix_world.inverted()
+    head = inv @ (rig.matrix_world @ rig.pose.bones['head'].head)
+    ph = inv @ phone.matrix_world.translation
+    lens = inv @ bpy.data.objects['PHONE_LENS_MAIN'].matrix_world.translation
+    shoulder = head + Vector((-0.32, -0.04, 0.1))          # beside the passenger's head, inside the cabin
+    return {'head': head, 'phone': ph, 'lens': lens, 'shoulder': shoulder, 'out': ph + Vector((0.0, 6.0, -1.2))}
 
 def hover_helicopter(F, loc=(260, -210, 262)):
     link_asset('helicopter.blend', 'HELICOPTER'); heli = bpy.data.objects['HELI_ROOT']
-    heli.location = loc; heli.rotation_euler = (math.radians(-1), 0, math.atan2(-210 - (-700), 260 - 600) - math.pi / 2)
+    # door (+X of the helicopter) faces the Posta CBD so the passenger films the skyline through it
+    heli.location = loc; heli.rotation_euler = (math.radians(-1), 0, door_yaw(loc))
     for f, dz in ((1, 0), (F // 2, 0.5), (F, 0)):
         heli.location.z = loc[2] + dz; heli.keyframe_insert('location', frame=f)
     rot = bpy.data.objects['ROTOR_MAIN']; rot.rotation_euler = (0, 0, 0); rot.keyframe_insert('rotation_euler', frame=1)

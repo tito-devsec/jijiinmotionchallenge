@@ -14,6 +14,7 @@ def heli_path(F):
         nxt = pts[min(pts.index((f, loc)) + 1, len(pts) - 1)][1]; prv = pts[max(pts.index((f, loc)) - 1, 0)][1]
         dx, dy = nxt[0] - prv[0], nxt[1] - prv[1]; yaw = math.atan2(dy, dx) - math.pi / 2
         pitch = math.radians(-6 if f < F else -1); roll = math.radians(4 if f < F else 0)
+        if f == F: yaw = S.door_yaw(loc)   # settle into the hover with the open door facing the Posta skyline
         P.key(root, f, rot=(pitch, roll, yaw))
     P.ease_all(root)
     rot = bpy.data.objects['ROTOR_MAIN']; rot.rotation_euler = (0, 0, 0); rot.keyframe_insert('rotation_euler', frame=1)

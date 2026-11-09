@@ -16,24 +16,22 @@ def build(scn, quality):
     rig, phone = S.cabin_passenger(seat, F)
     S.screen_sequence(seq_dir=os.path.join(P.ROOT, 'renders', 's09_ui'), strength=2.6)
     bpy.context.view_layer.update()
-    lens = phone.matrix_world.inverted() @ bpy.data.objects['PHONE_LENS_MAIN'].matrix_world.translation   # main lens centre, phone-local
-    tgt = P.make_empty('CAM_TARGET', (0, 0, 0)); tgt.parent = phone
-    cam = P.add_camera(loc=(0, 0, 0), target=tgt, lens=32, dof_target=tgt, fstop=5.6)
-    cam.parent = phone; cam.data.clip_start = 0.001; cam.data.sensor_width = 36
-    keys = [(1, Vector((-0.06, -0.32, 0.42)), Vector((0, 0, 0))),             # over the shoulder on the live screen
-            (int(F * 0.33), Vector((0.0, -0.02, 0.17)), Vector((0, 0.0, 0))),  # screen fills the frame
-            (int(F * 0.52), Vector((0.16, 0.06, 0.0)), Vector((0.02, 0.06, 0))),  # sweep round the long edge
-            (int(F * 0.72), lens + Vector((0.05, 0.03, -0.11)), lens),          # rear camera island
-            (int(F * 0.9), lens + Vector((0, 0, -0.028)), lens),               # macro on the main lens
-            (F, lens + Vector((0, 0, -0.0012)), lens + Vector((0, 0, 0.03)))]   # through the glass
+    A = S.seat_cams(seat, rig, phone); Y = Vector((0, 1, 0))
+    tgt = P.make_empty('CAM_TARGET', (0, 0, 0)); tgt.parent = seat
+    cam = P.add_camera(loc=(0, 0, 0), target=tgt, lens=28, dof_target=tgt, fstop=5.6); cam.parent = seat; cam.data.clip_start = 0.001
+    keys = [(1, A['shoulder'], A['out']),                                               # beside the passenger: filming the skyline
+            (int(F * 0.35), A['shoulder'] + (A['phone'] - A['shoulder']) * 0.5 + Vector((0, 0, 0.05)), A['phone']),
+            (int(F * 0.6), A['lens'] + Y * 0.35 + Vector((0.08, 0, 0.04)), A['lens']),   # outside the door, facing the camera island
+            (int(F * 0.85), A['lens'] + Y * 0.03, A['lens']),                          # macro on the main lens
+            (F, A['lens'] + Y * 0.0012, A['lens'] - Y * 0.05)]                         # through the glass
     for f, c, t in keys:
         cam.location = c; cam.keyframe_insert('location', frame=f); tgt.location = t; tgt.keyframe_insert('location', frame=f)
     P.ease_all(cam); P.ease_all(tgt)
-    for f, l in ((1, 32), (int(F * 0.33), 35), (int(F * 0.72), 50), (F, 60)):
+    for f, l in ((1, 28), (int(F * 0.35), 35), (int(F * 0.6), 50), (F, 60)):
         cam.data.lens = l; cam.data.keyframe_insert('lens', frame=f)
-    for f, s in ((1, 5.6), (int(F * 0.72), 8.0), (F, 11.0)):
-        cam.data.dof.aperture_fstop = s; cam.data.dof.keyframe_insert('aperture_fstop', frame=f)
-    # soft fill on the phone
+    for f, st in ((1, 4.0), (int(F * 0.6), 8.0), (F, 11.0)):
+        cam.data.dof.aperture_fstop = st; cam.data.dof.keyframe_insert('aperture_fstop', frame=f)
+    # soft fill on the phone (kept from the cabin rig)
     ld = bpy.data.lights.new('CABIN_FILL', 'AREA'); ld.energy = 25; ld.size = 0.6; ld.color = (1.0, 0.9, 0.8)
     lo = bpy.data.objects.new('CABIN_FILL', ld); bpy.context.scene.collection.objects.link(lo); lo.parent = phone; lo.location = (-0.3, -0.4, 0.5)
     c = lo.constraints.new('TRACK_TO'); c.target = phone; c.track_axis = 'TRACK_NEGATIVE_Z'; c.up_axis = 'UP_Y'
