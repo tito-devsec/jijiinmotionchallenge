@@ -1,0 +1,276 @@
+{
+  "generator": "gen-map",
+  "generator_version": "run33 · 82b9819",
+  "preset": "B",
+  "presets": [
+    "B",
+    "C",
+    "D"
+  ],
+  "crs": {
+    "proj4": "+proj=tmerc +lat_0=-6.81926 +lon_0=39.29268 +k=1 +x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs",
+    "origin_lat": -6.81926,
+    "origin_lon": 39.29268,
+    "axis": "glTF y-up: x=east, y=up(z), z=-north",
+    "units": "m"
+  },
+  "z_offset": 0,
+  "area_m": {
+    "width": 2200,
+    "height": 1800
+  },
+  "sector_m": 2000,
+  "sectors": [
+    {
+      "col": 0,
+      "row": 0,
+      "bounds_m": [
+        -1100,
+        -900,
+        900,
+        900
+      ],
+      "files": [
+        "Instances/Tile_X0_Y0.trees.json",
+        "Meshes_DCC/Tile_X0_Y0.glb",
+        "Meshes_CityJSON/Tile_X0_Y0.city.json",
+        "Meshes_CityJSON/Tile_X0_Y0.city.jsonl",
+        "GIS/Tile_X0_Y0.geojson",
+        "CAD_Civil3D/Tile_X0_Y0.dxf",
+        "CAD_Civil3D/Tile_X0_Y0_surface.xml",
+        "CAD_Civil3D/Tile_X0_Y0_points.csv"
+      ],
+      "osm_timestamp": "2026-11-09T07:47:06Z",
+      "stats": {
+        "buildings": 2368,
+        "roads": 423,
+        "waterBodies": 2,
+        "waterways": 10,
+        "trees": 820,
+        "terrainTriangles": 64024
+      }
+    },
+    {
+      "col": 1,
+      "row": 0,
+      "bounds_m": [
+        900,
+        -900,
+        1100,
+        900
+      ],
+      "files": [
+        "Instances/Tile_X1_Y0.trees.json",
+        "Meshes_DCC/Tile_X1_Y0.glb",
+        "Meshes_CityJSON/Tile_X1_Y0.city.json",
+        "Meshes_CityJSON/Tile_X1_Y0.city.jsonl",
+        "GIS/Tile_X1_Y0.geojson",
+        "CAD_Civil3D/Tile_X1_Y0.dxf",
+        "CAD_Civil3D/Tile_X1_Y0_surface.xml",
+        "CAD_Civil3D/Tile_X1_Y0_points.csv"
+      ],
+      "osm_timestamp": "2026-11-09T07:47:06Z",
+      "stats": {
+        "buildings": 104,
+        "roads": 16,
+        "waterBodies": 1,
+        "waterways": 4,
+        "trees": 9,
+        "terrainTriangles": 4766
+      }
+    }
+  ],
+  "dem": {
+    "name": "Terrarium (AWS Terrain Tiles)",
+    "zoom": 15,
+    "tiles": 6,
+    "attribution": "Terrain Tiles: https://github.com/tilezen/joerd/blob/master/docs/attribution.md"
+  },
+  "heightmap": {
+    "file": "Heightmaps/Terrain_Heightmap_16bit.png",
+    "size": 1009,
+    "z_min_m": -1.0387033224105835,
+    "z_max_m": 25.800992965698242,
+    "orientation": "row 0 = north",
+    "note": "Area is stretched to a square image; use extent_m for X/Y scale",
+    "unreal": {
+      "scale_z_percent": 5.242128181271255,
+      "location_z_m": 12.38134959540051,
+      "scale_xy_cm_per_quad": [
+        218.25396825396822,
+        178.57142857142858
+      ]
+    },
+    "unity": {
+      "file": "Heightmaps/Terrain_Heightmap_16bit_unity.raw",
+      "size": 1025,
+      "byte_order": "little-endian",
+      "depth_bits": 16,
+      "terrain_size_m": [
+        2200,
+        26.839696288108826,
+        1800
+      ],
+      "flip_vertically": false
+    }
+  },
+  "splatmaps": {
+    "size": 1009,
+    "layers": {
+      "road": "Heightmaps/Splat_road.png",
+      "water": "Heightmaps/Splat_water.png",
+      "green": "Heightmaps/Splat_green.png",
+      "built_up": "Heightmaps/Splat_built_up.png"
+    }
+  },
+  "instances": {
+    "trees": {
+      "files": "Instances/Tile_X#_Y#.trees.json",
+      "forest_scatter_spacing_m": 16,
+      "note": "OSM natural=tree nodes plus optional scatter inside forest/wood polygons; positions in the local CRS"
+    }
+  },
+  "tunnels_skipped_osm_ids": [],
+  "cad": {
+    "folder": "CAD_Civil3D",
+    "crs": {
+      "kind": "local",
+      "name": "Local scene system (transverse Mercator, k0 = 1, origin = scene centre)",
+      "epsg": null,
+      "proj4": "+proj=tmerc +lat_0=-6.81926 +lon_0=39.29268 +k=1 +x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs",
+      "axes": "x = easting, y = northing, z = elevation",
+      "units": "m"
+    },
+    "readme": "CAD_Civil3D/README_Civil3D.txt",
+    "tested_in_civil3d": false
+  },
+  "extras": {
+    "shellsHidden": 2,
+    "options": {
+      "treeModels": true,
+      "shrubs": true,
+      "hedges": true,
+      "fences": true,
+      "walls": true,
+      "lamps": true,
+      "signals": true,
+      "signs": true,
+      "busStops": true,
+      "benches": true,
+      "bins": true,
+      "crossings": true,
+      "markings": true,
+      "kerbs": true,
+      "parking": true,
+      "plazas": true,
+      "buildingParts": true,
+      "buildingColors": true,
+      "towers": true,
+      "powerLines": true,
+      "railMasts": true,
+      "platforms": true,
+      "shelters": true,
+      "tunnels": true,
+      "layerJunctions": true,
+      "pitches": true,
+      "playgrounds": true,
+      "pools": true,
+      "stadiums": true,
+      "tracks": true,
+      "golf": true,
+      "beaches": true,
+      "playEquipment": true,
+      "ski": true,
+      "memorials": true,
+      "shrines": true,
+      "windmills": true,
+      "lighthouses": true,
+      "churches": true,
+      "castles": true,
+      "orchards": true,
+      "vineyards": true,
+      "farmland": true,
+      "cemeteries": true,
+      "weirs": true,
+      "piers": true,
+      "cliffs": true,
+      "rocks": true,
+      "stones": true,
+      "dunes": true
+    },
+    "counts": {
+      "treeModels": 829,
+      "treeModelsSkipped": 0,
+      "shrubs": 0,
+      "hedges": 0,
+      "fences": 6,
+      "walls": 1,
+      "furniture": 16,
+      "crossings": 0,
+      "parkings": 11,
+      "plazas": 2,
+      "catenary": 1,
+      "platforms": 1,
+      "shelters": 5,
+      "tunnels": 12,
+      "cemeteries": 1,
+      "piers": 7,
+      "golfAreas": 1,
+      "flags": 1,
+      "memorials": 3,
+      "churches": 1,
+      "beaches": 2
+    },
+    "note": "tree models are capped at 20000 per sector (treeModelsSkipped); every tree stays in Instances/*.trees.json"
+  },
+  "materials": [
+    "OSM_Terrain",
+    "OSM_Building_Wall",
+    "OSM_Building_Roof",
+    "OSM_Road",
+    "OSM_Path",
+    "OSM_Rail",
+    "OSM_Bridge",
+    "OSM_Water",
+    "OSM_Tree_Trunk",
+    "OSM_Tree_Leaves",
+    "OSM_Tree_Leaves_Conifer",
+    "OSM_Tree_Leaves_Poplar",
+    "OSM_Tree_Leaves_Bush",
+    "OSM_Hedge",
+    "OSM_Fence",
+    "OSM_Barrier_Wall",
+    "OSM_Metal",
+    "OSM_Sign",
+    "OSM_Wood",
+    "OSM_Bin",
+    "OSM_Marking",
+    "OSM_Curb",
+    "OSM_Parking",
+    "OSM_Plaza",
+    "OSM_Building_Roof_Plain",
+    "OSM_Tower",
+    "OSM_Wire",
+    "OSM_Tunnel",
+    "OSM_Concrete",
+    "OSM_Pitch_Grass",
+    "OSM_Pitch_Court",
+    "OSM_Playground",
+    "OSM_Pool",
+    "OSM_Field",
+    "OSM_Stone",
+    "OSM_Platform",
+    "OSM_Rock",
+    "OSM_Sand",
+    "OSM_Track",
+    "OSM_Golf_Green",
+    "OSM_Golf_Fairway",
+    "OSM_Snow"
+  ],
+  "timings": {
+    "osm_s": 66,
+    "dem_s": 9.5,
+    "generate_s": 33.7,
+    "total_s": 109.2
+  }
+}
