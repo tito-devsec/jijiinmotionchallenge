@@ -310,6 +310,7 @@ def import_node_group(blend, name):
 def screen_sequence(mat_name='MAT_PhoneScreen', seq_dir=None, first=1, count=None, offset=0, strength=3.5):
     """Feed an image sequence into the phone screen emission."""
     import glob as _g
+    if seq_dir and os.environ.get('POSTA_SCREEN_DIR'): seq_dir = os.environ['POSTA_SCREEN_DIR']
     mat = bpy.data.materials.get(mat_name)
     files = sorted(_g.glob(os.path.join(seq_dir, 'f_*.png'))) if seq_dir else []
     if not mat or not files: print('screen sequence skipped', seq_dir); return False

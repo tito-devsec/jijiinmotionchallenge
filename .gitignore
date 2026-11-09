@@ -1,4 +1,6 @@
 POSTA_2040/renders/**/*.png
+POSTA_2040/renders/_edit*/
+POSTA_2040/renders/*.log
 POSTA_2040/renders/**/*.exr
 __pycache__/
 *.blend1

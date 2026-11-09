@@ -6,7 +6,8 @@ import os, json, subprocess, sys, glob, shutil
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 cfg = json.load(open(os.path.join(ROOT, 'scripts', 'film_config.json'))); FPS = cfg['fps']; W, H = cfg['resolution']
 step = int(sys.argv[sys.argv.index('--step') + 1]) if '--step' in sys.argv else 1
-R = os.path.join(ROOT, 'renders'); TMP = os.path.join(R, '_edit'); os.makedirs(TMP, exist_ok=True)
+SUF = sys.argv[sys.argv.index('--suffix') + 1] if '--suffix' in sys.argv else ''
+R = os.path.join(ROOT, 'renders'); TMP = os.path.join(R, '_edit' + SUF); os.makedirs(TMP, exist_ok=True)
 XF = 0.5  # crossfade seconds between scenes
 
 def run(cmd): print(' '.join(cmd) if isinstance(cmd, list) else cmd); subprocess.run(cmd, check=True)
@@ -15,9 +16,9 @@ clips = []
 # title cards (pre-rendered at 24 fps by brand_cards.py) bracket the film
 cards = [{'id': 'card_open', 'title': 'Opening card', 'frames': 72}] + cfg['scenes'] + [{'id': 'card_close', 'title': 'Closing card', 'frames': 120}]
 for s in cards:
-    d = os.path.join(R, s['id'])
-    for alt in ('_ui',):  # composited versions (camera / social UI) take precedence
-        if glob.glob(os.path.join(R, s['id'] + alt, 'f_*.png')): d = os.path.join(R, s['id'] + alt)
+    base = s['id'] if s['id'].startswith('card') else s['id'] + SUF
+    d = os.path.join(R, base)
+    if glob.glob(os.path.join(R, base + '_ui', 'f_*.png')): d = os.path.join(R, base + '_ui')  # composited UI versions take precedence
     frames = sorted(glob.glob(os.path.join(d, 'f_*.png')))
     nums = [int(os.path.basename(p)[2:6]) for p in frames]
     gaps = [b - a for a, b in zip(nums, nums[1:])] + [max(1, s['frames'] - nums[-1] + 1)] if frames else []
@@ -70,6 +71,6 @@ for i, (stem, sid, off, g) in enumerate(plan):
 af.append(f"{''.join(mixin)}amix=inputs={len(mixin)}:duration=longest:normalize=0,alimiter=limit=0.95,atrim=0:{total:.3f}[aout]")
 audio = os.path.join(TMP, 'audio.wav')
 run(['ffmpeg', '-y', '-loglevel', 'error', *ain, '-filter_complex', ';'.join(af), '-map', '[aout]', '-ar', '48000', audio])
-final = os.path.join(R, 'JIJI_IN_MOTION_final.mp4')
-run(['ffmpeg', '-y', '-loglevel', 'error', '-i', video, '-i', audio, '-c:v', 'copy', '-c:a', 'aac', '-b:a', '256k', '-shortest', '-movflags', '+faststart', final])
+final = os.path.join(R, 'JIJI_IN_MOTION' + ('_preview' if SUF else '_final') + '.mp4')
+run(['ffmpeg', '-y', '-loglevel', 'error', '-i', video, '-i', audio, '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', final])
 print('FINAL', final, dur(final))
