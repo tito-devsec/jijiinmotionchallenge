@@ -12,7 +12,7 @@ def build(scn, quality):
     S.world_bluehour(sun_energy=0.3, strength=0.55)
     S.enable_mist(start=500, depth=3500, color=(0.1, 0.1, 0.2, 1), strength=0.3)
     heli, seat = S.hover_helicopter(F); rig, phone = S.cabin_passenger(seat, F)
-    S.screen_sequence(seq_dir=os.path.join(P.ROOT, 'renders', 's09_ui'), strength=2.6, flip=True, offset=288)
+    S.screen_sequence(seq_dir=os.path.join(P.ROOT, 'renders', 's09_ui'), strength=2.6, flip=True)
     # the hand opens and reaches after the phone
     CA.set_rot(rig, 'upper_arm.R', rx=80, frame=8); CA.set_rot(rig, 'upper_arm.R', rx=95, ry=-10, frame=20); CA.set_rot(rig, 'head', rx=35, frame=24)
     bpy.context.view_layer.update()
