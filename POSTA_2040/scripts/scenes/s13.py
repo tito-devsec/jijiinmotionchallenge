@@ -34,11 +34,13 @@ def build(scn, quality):
         b.data.materials.append(P.new_mat('MAT_FarCity', (0.12, 0.14, 0.18, 1), 0.3, 0.6))
     bpy.context.view_layer.update()
     pw = phone.matrix_world.translation.copy(); head = rig.matrix_world @ rig.pose.bones['head'].head
-    # over the diver's right shoulder: start wide on diver + phone + far skyline, push in until the screen fills the frame
-    sh = head + (head - pw).normalized() * 0.0
-    back = Vector((head.x - pw.x, head.y - pw.y, 0)).normalized()
-    c0 = head + back * 0.9 + Vector((0.45, 0, 0.35)); c1 = head + back * 0.15 + Vector((0.18, 0, 0.08)); c2 = pw + (head - pw).normalized() * 0.2
-    cam = P.add_camera(loc=c0, target=phone, lens=35, dof_target=phone, fstop=2.8)
+    n = (phone.matrix_world.to_3x3() @ Vector((0, 0, 1))).normalized()           # screen normal
+    if n.dot(head - pw) < 0: n = -n                                             # make it face the viewer's side
+    side = n.cross(Vector((0, 0, 1))).normalized()
+    c0 = head + (head - pw).normalized() * 0.35 + side * 0.35 + Vector((0, 0, 0.18))   # over the diver's shoulder, wide
+    c1 = pw + n * 0.45 + side * 0.12 + Vector((0, 0, 0.06))
+    c2 = pw + n * 0.13                                                           # the screen fills the frame
+    cam = P.add_camera(loc=tuple(c0), target=phone, lens=35, dof_target=phone, fstop=2.8)
     S.cam_path(cam, [(1, tuple(c0)), (int(F * 0.45), tuple(c1)), (F, tuple(c2))])
     cam.data.clip_start = 0.01
     S.enable_mist(start=200, depth=3000, color=(0.95, 0.8, 0.62, 1), strength=0.4)
