@@ -72,5 +72,5 @@ af.append(f"{''.join(mixin)}amix=inputs={len(mixin)}:duration=longest:normalize=
 audio = os.path.join(TMP, 'audio.wav')
 run(['ffmpeg', '-y', '-loglevel', 'error', *ain, '-filter_complex', ';'.join(af), '-map', '[aout]', '-ar', '48000', audio])
 final = os.path.join(R, 'JIJI_IN_MOTION' + ('_preview' if SUF else '_final') + '.mp4')
-run(['ffmpeg', '-y', '-loglevel', 'error', '-i', video, '-i', audio, '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', final])
+run(['ffmpeg', '-y', '-loglevel', 'error', '-i', video, '-i', audio, '-c:v', 'libx264', '-preset', 'slow', '-crf', ('27' if SUF else '20'), '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', final])
 print('FINAL', final, dur(final))
