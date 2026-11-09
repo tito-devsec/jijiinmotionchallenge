@@ -56,9 +56,10 @@ def glyph_material(name='MAT_BinaryGlyph', c1='turq', c2='blue', strength=6.0):
     em = nt.nodes.new('ShaderNodeEmission')
     oi = nt.nodes.new('ShaderNodeObjectInfo')
     ramp = nt.nodes.new('ShaderNodeValToRGB'); ramp.color_ramp.interpolation = 'CONSTANT'
-    ramp.color_ramp.elements[0].color = PAL[c1]; ramp.color_ramp.elements[1].position = 0.5; ramp.color_ramp.elements[1].color = PAL[c2]
-    e2 = ramp.color_ramp.elements.new(0.8); e2.color = PAL['white']
-    e3 = ramp.color_ramp.elements.new(0.94); e3.color = PAL['orange']
+    ramp.color_ramp.elements[0].color = (0.22, 0.62, 1.0, 1); ramp.color_ramp.elements[1].position = 0.45; ramp.color_ramp.elements[1].color = PAL[c2]
+    e2 = ramp.color_ramp.elements.new(0.78); e2.color = (0.75, 0.9, 1.0, 1)
+    e3 = ramp.color_ramp.elements.new(0.93); e3.color = PAL['orange']
+    e4 = ramp.color_ramp.elements.new(0.97); e4.color = PAL[c1]
     nt.links.new(oi.outputs['Random'], ramp.inputs[0]); nt.links.new(ramp.outputs[0], em.inputs[0])
     tval = nt.nodes.new('ShaderNodeValue'); tval.name = 'time'; tval.label = 'time'
     fc = tval.outputs[0].driver_add('default_value'); fc.driver.expression = 'frame/24.0'
@@ -72,8 +73,34 @@ def glyph_material(name='MAT_BinaryGlyph', c1='turq', c2='blue', strength=6.0):
     nt.links.new(em.outputs[0], out.inputs[0])
     return m
 
-def dissolving_material(name, base_color, rough=0.6, metal=0.0, glow='turq', glow_strength=2.5):
-    """Surface material whose faces glow at the dissolve front: reads face attribute 'front' (0..1)."""
+def holo_grid_nodes(nt, floor=3.2, bay=2.6, line_color=(0.25, 0.7, 1.0, 1), line_strength=5.0):
+    """Holographic building shell: glowing floor lines and mullions over translucent navy glass, a few lit panels.
+    Returns the shader output socket."""
+    tc = nt.nodes.new('ShaderNodeTexCoord'); sep = nt.nodes.new('ShaderNodeSeparateXYZ'); nt.links.new(tc.outputs['Object'], sep.inputs[0])
+    def lines(sock, period, width):
+        d = nt.nodes.new('ShaderNodeMath'); d.operation = 'DIVIDE'; d.inputs[1].default_value = period; nt.links.new(sock, d.inputs[0])
+        fr = nt.nodes.new('ShaderNodeMath'); fr.operation = 'FRACT'; nt.links.new(d.outputs[0], fr.inputs[0])
+        a = nt.nodes.new('ShaderNodeMath'); a.operation = 'LESS_THAN'; a.inputs[1].default_value = width; nt.links.new(fr.outputs[0], a.inputs[0])
+        return a.outputs[0]
+    lz = lines(sep.outputs['Z'], floor, 0.06); lx = lines(sep.outputs['X'], bay, 0.035); ly = lines(sep.outputs['Y'], bay, 0.035)
+    m1 = nt.nodes.new('ShaderNodeMath'); m1.operation = 'MAXIMUM'; nt.links.new(lz, m1.inputs[0]); nt.links.new(lx, m1.inputs[1])
+    m2 = nt.nodes.new('ShaderNodeMath'); m2.operation = 'MAXIMUM'; nt.links.new(m1.outputs[0], m2.inputs[0]); nt.links.new(ly, m2.inputs[1])
+    # occasional bright holographic panels (cell-random)
+    snap = nt.nodes.new('ShaderNodeVectorMath'); snap.operation = 'SNAP'; snap.inputs[1].default_value = (bay * 3, bay * 3, floor * 4); nt.links.new(tc.outputs['Object'], snap.inputs[0])
+    wn = nt.nodes.new('ShaderNodeTexWhiteNoise'); wn.noise_dimensions = '3D'; nt.links.new(snap.outputs[0], wn.inputs['Vector'])
+    pan = nt.nodes.new('ShaderNodeMath'); pan.operation = 'GREATER_THAN'; pan.inputs[1].default_value = 0.9; nt.links.new(wn.outputs['Value'], pan.inputs[0])
+    pans = nt.nodes.new('ShaderNodeMath'); pans.operation = 'MULTIPLY'; pans.inputs[1].default_value = 0.35; nt.links.new(pan.outputs[0], pans.inputs[0])
+    ls = nt.nodes.new('ShaderNodeMath'); ls.operation = 'MULTIPLY'; ls.inputs[1].default_value = line_strength; nt.links.new(m2.outputs[0], ls.inputs[0])
+    tot = nt.nodes.new('ShaderNodeMath'); tot.operation = 'ADD'; nt.links.new(ls.outputs[0], tot.inputs[0]); nt.links.new(pans.outputs[0], tot.inputs[1])
+    base = nt.nodes.new('ShaderNodeMath'); base.operation = 'ADD'; base.inputs[1].default_value = 0.04; nt.links.new(tot.outputs[0], base.inputs[0])
+    em = nt.nodes.new('ShaderNodeEmission'); em.inputs['Color'].default_value = line_color; nt.links.new(base.outputs[0], em.inputs['Strength'])
+    tr = nt.nodes.new('ShaderNodeBsdfTransparent'); tr.inputs['Color'].default_value = (0.75, 0.85, 1.0, 1)
+    add = nt.nodes.new('ShaderNodeAddShader'); nt.links.new(tr.outputs[0], add.inputs[0]); nt.links.new(em.outputs[0], add.inputs[1])
+    return add.outputs[0]
+
+def dissolving_material(name, base_color, rough=0.6, metal=0.0, glow='turq', glow_strength=2.5, holo=True):
+    """Real surface that glows at the transformation front ('front') and turns into a holographic grid shell where the
+    binary system marks faces 'digital' (only visible when the modifier runs with Keep Shell = 1)."""
     m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
     m.use_nodes = True; nt = m.node_tree
     for n in list(nt.nodes): nt.nodes.remove(n)
@@ -83,7 +110,12 @@ def dissolving_material(name, base_color, rough=0.6, metal=0.0, glow='turq', glo
     mul = nt.nodes.new('ShaderNodeMath'); mul.operation = 'MULTIPLY'; mul.inputs[1].default_value = glow_strength
     b.inputs['Emission Color'].default_value = PAL[glow]
     nt.links.new(attr.outputs['Fac'], mul.inputs[0]); nt.links.new(mul.outputs[0], b.inputs['Emission Strength'])
-    nt.links.new(b.outputs[0], out.inputs[0])
+    if holo:
+        dig = nt.nodes.new('ShaderNodeAttribute'); dig.attribute_name = 'digital'
+        mix = nt.nodes.new('ShaderNodeMixShader'); nt.links.new(dig.outputs['Fac'], mix.inputs[0])
+        nt.links.new(b.outputs[0], mix.inputs[1]); nt.links.new(holo_grid_nodes(nt), mix.inputs[2]); nt.links.new(mix.outputs[0], out.inputs[0])
+    else:
+        nt.links.new(b.outputs[0], out.inputs[0])
     return m
 
 # ----------------------------------------------------------------- glyphs
@@ -133,7 +165,7 @@ def binary_transform_group(name='GN_BinaryTransform'):
     t = bpy.data.node_groups.new(name, 'GeometryNodeTree')
     it = t.interface
     it.new_socket('Geometry', in_out='INPUT', socket_type='NodeSocketGeometry')
-    for nm, dv, mn, mx in (('Progress', 0.0, 0.0, 1.0), ('Density', 0.8, 0.0, 1000.0), ('Glyph Size', 0.9, 0.0, 100.0), ('Noise Scale', 0.02, 0.0, 100.0), ('Seed', 0.0, 0.0, 10000.0), ('Flow', 0.0, -1e6, 1e6), ('Height Bias', 0.5, 0.0, 1.0), ('Edge Glow', 1.0, 0.0, 1.0), ('Band', 0.12, 0.001, 1.0)):
+    for nm, dv, mn, mx in (('Progress', 0.0, 0.0, 1.0), ('Density', 0.8, 0.0, 1000.0), ('Glyph Size', 0.9, 0.0, 100.0), ('Noise Scale', 0.02, 0.0, 100.0), ('Seed', 0.0, 0.0, 10000.0), ('Flow', 0.0, -1e6, 1e6), ('Height Bias', 0.5, 0.0, 1.0), ('Edge Glow', 1.0, 0.0, 1.0), ('Band', 0.12, 0.001, 1.0), ('Keep Shell', 0.0, 0.0, 1.0), ('Scatter', 0.0, 0.0, 100.0)):
         s = it.new_socket(nm, in_out='INPUT', socket_type='NodeSocketFloat'); s.default_value = dv; s.min_value = mn; s.max_value = mx
     it.new_socket('Glyphs', in_out='INPUT', socket_type='NodeSocketCollection')
     it.new_socket('Geometry', in_out='OUTPUT', socket_type='NodeSocketGeometry')
@@ -171,7 +203,11 @@ def binary_transform_group(name='GN_BinaryTransform'):
     g.link(I('Geometry'), store_front.inputs['Geometry']); g.link(frontg.outputs[0], store_front.inputs['Value'])
     # dissolve faces where t < progress  (surface breaks into digits)
     less = g.n('FunctionNodeCompare', dtype='FLOAT', op='LESS_THAN'); g.link(T, less.inputs[0]); g.link(I('Progress'), less.inputs[1])
-    delf = g.n('GeometryNodeDeleteGeometry', domain='FACE'); g.link(store_front.outputs[0], delf.inputs['Geometry']); g.link(less.outputs[0], delf.inputs['Selection'])
+    store_dig = g.n('GeometryNodeStoreNamedAttribute', dtype='FLOAT', domain='FACE'); store_dig.inputs['Name'].default_value = 'digital'
+    g.link(store_front.outputs[0], store_dig.inputs['Geometry']); g.link(less.outputs[0], store_dig.inputs['Value'])
+    nokeep = g.n('FunctionNodeCompare', dtype='FLOAT', op='LESS_THAN'); g.link(I('Keep Shell'), nokeep.inputs[0]); nokeep.inputs[1].default_value = 0.5
+    delsel = g.n('FunctionNodeBooleanMath', op='AND'); g.link(less.outputs[0], delsel.inputs[0]); g.link(nokeep.outputs[0], delsel.inputs[1])
+    delf = g.n('GeometryNodeDeleteGeometry', domain='FACE'); g.link(store_dig.outputs[0], delf.inputs['Geometry']); g.link(delsel.outputs[0], delf.inputs['Selection'])
     # --- glyph points on the ORIGINAL surface, visible where t < progress + band (digits appear just ahead of the dissolve)
     dist = g.n('GeometryNodeDistributePointsOnFaces'); dist.distribute_method = 'RANDOM'
     g.link(I('Geometry'), dist.inputs['Mesh']); g.link(I('Density'), dist.inputs['Density']); g.link(I('Seed'), dist.inputs['Seed'])
@@ -207,7 +243,16 @@ def binary_transform_group(name='GN_BinaryTransform'):
     off = g.n('ShaderNodeVectorMath', op='SCALE'); g.link(dist.outputs['Normal'], off.inputs[0])
     off_amt = g.n('ShaderNodeMath', op='MULTIPLY'); g.link(I('Glyph Size'), off_amt.inputs[0]); off_amt.inputs[1].default_value = 0.35
     g.link(off_amt.outputs[0], off.inputs['Scale'])
-    total_off = g.n('ShaderNodeVectorMath', op='ADD'); g.link(nrm_scale.outputs[0], total_off.inputs[0]); g.link(off.outputs[0], total_off.inputs[1])
+    total_off0 = g.n('ShaderNodeVectorMath', op='ADD'); g.link(nrm_scale.outputs[0], total_off0.inputs[0]); g.link(off.outputs[0], total_off0.inputs[1])
+    sn4 = g.n('ShaderNodeTexNoise'); sn4.noise_dimensions = '4D'; sn4.inputs['Scale'].default_value = 1.3; sn4.inputs['Detail'].default_value = 1.0
+    g.link(pos.outputs[0], sn4.inputs['Vector']); g.link(I('Flow'), sn4.inputs['W'])
+    cen = g.n('ShaderNodeVectorMath', op='SUBTRACT'); g.link(sn4.outputs['Color'], cen.inputs[0]); cen.inputs[1].default_value = (0.5, 0.5, 0.5)
+    dirv = g.n('ShaderNodeVectorMath', op='ADD'); g.link(cen.outputs[0], dirv.inputs[0]); g.link(dist.outputs['Normal'], dirv.inputs[1])
+    share = g.n('ShaderNodeMath', op='GREATER_THAN'); g.link(rnd.outputs[1], share.inputs[0]); share.inputs[1].default_value = 0.45
+    amt = g.n('ShaderNodeMath', op='MULTIPLY'); g.link(share.outputs[0], amt.inputs[0]); g.link(I('Scatter'), amt.inputs[1])
+    amt2 = g.n('ShaderNodeMath', op='MULTIPLY'); g.link(amt.outputs[0], amt2.inputs[0]); g.link(rnd.outputs[1], amt2.inputs[1])
+    scat = g.n('ShaderNodeVectorMath', op='SCALE'); g.link(dirv.outputs[0], scat.inputs[0]); g.link(amt2.outputs[0], scat.inputs['Scale'])
+    total_off = g.n('ShaderNodeVectorMath', op='ADD'); g.link(total_off0.outputs[0], total_off.inputs[0]); g.link(scat.outputs[0], total_off.inputs[1])
     setpos = g.n('GeometryNodeSetPosition'); g.link(dist.outputs['Points'], setpos.inputs['Geometry']); g.link(total_off.outputs[0], setpos.inputs['Offset'])
     # select visible, store attrs on points (carried to instances)
     delp = g.n('GeometryNodeDeleteGeometry', domain='POINT'); g.link(setpos.outputs[0], delp.inputs['Geometry'])
@@ -245,11 +290,11 @@ def binary_transform_group(name='GN_BinaryTransform'):
     g.link(join.outputs[0], go.inputs[0])
     return t
 
-def apply_binary(obj, progress=0.0, density=0.8, size=0.9, noise_scale=0.02, seed=0.0, flow=0.0, height_bias=0.5, band=0.12, glyphs=None, name='Binary'):
+def apply_binary(obj, progress=0.0, density=0.8, size=0.9, noise_scale=0.02, seed=0.0, flow=0.0, height_bias=0.5, band=0.12, glyphs=None, name='Binary', keep_shell=0.0, scatter=0.0):
     glyphs = glyphs or make_glyph_collection()
     grp = binary_transform_group()
     md = obj.modifiers.new(name, 'NODES'); md.node_group = grp
-    vals = {'Progress': progress, 'Density': density, 'Glyph Size': size, 'Noise Scale': noise_scale, 'Seed': seed, 'Flow': flow, 'Height Bias': height_bias, 'Band': band}
+    vals = {'Progress': progress, 'Density': density, 'Glyph Size': size, 'Noise Scale': noise_scale, 'Seed': seed, 'Flow': flow, 'Height Bias': height_bias, 'Band': band, 'Keep Shell': keep_shell, 'Scatter': scatter}
     for s in grp.interface.items_tree:
         if s.item_type == 'SOCKET' and s.in_out == 'INPUT':
             if s.name in vals: md[s.identifier] = float(vals[s.name])

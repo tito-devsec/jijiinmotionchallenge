@@ -4,6 +4,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import posta_lib as P
 from mathutils import Vector
 import numpy as np
+from mathutils import Vector
 
 def fresh():
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -317,6 +318,7 @@ def screen_sequence(mat_name='MAT_PhoneScreen', seq_dir=None, first=1, count=Non
     nt = mat.node_tree; tex = nt.nodes.get('ScreenImage'); img = bpy.data.images.load(files[0]); img.source = 'SEQUENCE'
     tex.image = img; tex.image_user.frame_duration = count or len(files); tex.image_user.frame_start = first; tex.image_user.frame_offset = offset
     tex.image_user.use_auto_refresh = True; tex.image_user.use_cyclic = True
+    if offset: tex.image_user.frame_offset = offset
     b = next(n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'); nt.links.new(tex.outputs[0], b.inputs['Emission Color']); b.inputs['Emission Strength'].default_value = strength
     return True
 
@@ -327,3 +329,145 @@ def binary_off_after(md, frame):
     md.show_render = False; md.keyframe_insert('show_render', frame=frame)
     md.show_viewport = True; md.keyframe_insert('show_viewport', frame=frame - 1)
     md.show_viewport = False; md.keyframe_insert('show_viewport', frame=frame)
+
+# ----------------------------------------------------------------- reference-driven looks (assets/references/style)
+def binary_rain(center, size=600.0, top=140.0, height=140.0, columns_per_km2=900, glyph=1.4, per_column=16, speed=6.0, look_at=None, name='BINARY_RAIN'):
+    """Matrix-style falling binary columns over the city (binary_building.webp). Geometry Nodes, driven by the frame."""
+    glyphs = P.make_glyph_collection()
+    t = bpy.data.node_groups.new('GN_BinaryRain', 'GeometryNodeTree'); it = t.interface
+    it.new_socket('Geometry', in_out='OUTPUT', socket_type='NodeSocketGeometry')
+    it.new_socket('Time', in_out='INPUT', socket_type='NodeSocketFloat'); it.new_socket('Glyphs', in_out='INPUT', socket_type='NodeSocketCollection')
+    g = P.GN(t); gi = g.n('NodeGroupInput'); go = g.n('NodeGroupOutput')
+    grid = g.n('GeometryNodeMeshGrid'); grid.inputs['Size X'].default_value = size; grid.inputs['Size Y'].default_value = size
+    grid.inputs['Vertices X'].default_value = 2; grid.inputs['Vertices Y'].default_value = 2
+    dist = g.n('GeometryNodeDistributePointsOnFaces'); g.link(grid.outputs[0], dist.inputs['Mesh']); dist.inputs['Density'].default_value = columns_per_km2 / 1e6
+    rnd = g.n('FunctionNodeRandomValue', dtype='FLOAT'); idx = g.n('GeometryNodeInputIndex'); g.link(idx.outputs[0], rnd.inputs['ID'])
+    st = g.n('GeometryNodeStoreNamedAttribute', dtype='FLOAT', domain='POINT'); st.inputs['Name'].default_value = 'col'
+    g.link(dist.outputs['Points'], st.inputs['Geometry']); g.link(rnd.outputs[1], st.inputs['Value'])
+    line = g.n('GeometryNodeMeshLine'); line.inputs['Count'].default_value = per_column; line.inputs['Offset'].default_value = (0, 0, -glyph * 1.3)
+    inst = g.n('GeometryNodeInstanceOnPoints'); g.link(st.outputs[0], inst.inputs['Points']); g.link(line.outputs[0], inst.inputs['Instance'])
+    real = g.n('GeometryNodeRealizeInstances'); g.link(inst.outputs[0], real.inputs[0])
+    col = g.n('GeometryNodeInputNamedAttribute', dtype='FLOAT'); col.inputs['Name'].default_value = 'col'
+    pos = g.n('GeometryNodeInputPosition'); sep = g.n('ShaderNodeSeparateXYZ'); g.link(pos.outputs[0], sep.inputs[0])
+    # z = top - ((top - z0) + time*speed*(0.6+col) + col*height) mod height
+    sp = g.n('ShaderNodeMath', op='MULTIPLY_ADD'); g.link(col.outputs['Attribute'], sp.inputs[0]); sp.inputs[1].default_value = speed; sp.inputs[2].default_value = speed * 0.6
+    tt = g.n('ShaderNodeMath', op='MULTIPLY'); g.link(gi.outputs['Time'], tt.inputs[0]); g.link(sp.outputs[0], tt.inputs[1])
+    dz = g.n('ShaderNodeMath', op='MULTIPLY'); dz.inputs[0].default_value = -1.0; g.link(sep.outputs['Z'], dz.inputs[1])
+    ch = g.n('ShaderNodeMath', op='MULTIPLY'); g.link(col.outputs['Attribute'], ch.inputs[0]); ch.inputs[1].default_value = height
+    a1 = g.n('ShaderNodeMath', op='ADD'); g.link(dz.outputs[0], a1.inputs[0]); g.link(tt.outputs[0], a1.inputs[1])
+    a2 = g.n('ShaderNodeMath', op='ADD'); g.link(a1.outputs[0], a2.inputs[0]); g.link(ch.outputs[0], a2.inputs[1])
+    md = g.n('ShaderNodeMath', op='FLOORED_MODULO'); g.link(a2.outputs[0], md.inputs[0]); md.inputs[1].default_value = height
+    nz = g.n('ShaderNodeMath', op='SUBTRACT'); nz.inputs[0].default_value = top; g.link(md.outputs[0], nz.inputs[1])
+    cmb = g.n('ShaderNodeCombineXYZ'); g.link(sep.outputs['X'], cmb.inputs[0]); g.link(sep.outputs['Y'], cmb.inputs[1]); g.link(nz.outputs[0], cmb.inputs[2])
+    setp = g.n('GeometryNodeSetPosition'); g.link(real.outputs[0], setp.inputs['Geometry']); g.link(cmb.outputs[0], setp.inputs['Position'])
+    m2p = g.n('GeometryNodeMeshToPoints'); g.link(setp.outputs[0], m2p.inputs['Mesh'])
+    ci = g.n('GeometryNodeCollectionInfo'); ci.transform_space = 'ORIGINAL'; g.link(gi.outputs['Glyphs'], ci.inputs['Collection']); ci.inputs['Separate Children'].default_value = True; ci.inputs['Reset Children'].default_value = True
+    bit = g.n('FunctionNodeRandomValue', dtype='INT'); bit.inputs[4].default_value = 0; bit.inputs[5].default_value = 1
+    fl = g.n('ShaderNodeMath', op='FLOOR'); t3 = g.n('ShaderNodeMath', op='MULTIPLY'); g.link(gi.outputs['Time'], t3.inputs[0]); t3.inputs[1].default_value = 4.0; g.link(t3.outputs[0], fl.inputs[0])
+    g.link(fl.outputs[0], bit.inputs['Seed'])
+    ii = g.n('GeometryNodeInstanceOnPoints'); g.link(m2p.outputs[0], ii.inputs['Points']); g.link(ci.outputs[0], ii.inputs['Instance'])
+    ii.inputs['Pick Instance'].default_value = True; g.link(bit.outputs[2], ii.inputs['Instance Index'])
+    look = look_at or (center[0], center[1] - size, 30.0)
+    vec = g.n('ShaderNodeVectorMath', op='SUBTRACT'); vec.inputs[0].default_value = look; g.link(pos.outputs[0], vec.inputs[1])
+    rot = g.n('FunctionNodeAlignEulerToVector'); rot.axis = 'Z'; g.link(vec.outputs[0], rot.inputs['Vector'])
+    rot2 = g.n('FunctionNodeAlignEulerToVector'); rot2.axis = 'Y'; rot2.pivot_axis = 'Z'; g.link(rot.outputs[0], rot2.inputs['Rotation']); rot2.inputs['Vector'].default_value = (0, 0, 1)
+    g.link(rot2.outputs[0], ii.inputs['Rotation']); ii.inputs['Scale'].default_value = (glyph, glyph, glyph)
+    g.link(ii.outputs[0], go.inputs[0])
+    me = bpy.data.meshes.new(name); ob = bpy.data.objects.new(name, me); bpy.context.scene.collection.objects.link(ob); ob.location = (center[0], center[1], 0)
+    mdf = ob.modifiers.new('Rain', 'NODES'); mdf.node_group = t
+    ids = {s.name: s.identifier for s in t.interface.items_tree if s.item_type == 'SOCKET' and s.in_out == 'INPUT'}
+    mdf[ids['Glyphs']] = glyphs; mdf[ids['Time']] = 0.0
+    fc = ob.driver_add(f'modifiers["Rain"]["{ids["Time"]}"]'); fc.driver.expression = 'frame/24.0'
+    return ob
+
+def world_bluehour(sun_energy=0.25, strength=0.6):
+    """Blue hour like future_city_bluehour.webp: deep blue zenith, warm orange-violet horizon glow."""
+    sc = bpy.context.scene; w = sc.world or bpy.data.worlds.new('World'); sc.world = w; w.use_nodes = True; nt = w.node_tree
+    for n in list(nt.nodes): nt.nodes.remove(n)
+    out = nt.nodes.new('ShaderNodeOutputWorld'); bg = nt.nodes.new('ShaderNodeBackground'); tc = nt.nodes.new('ShaderNodeTexCoord')
+    sep = nt.nodes.new('ShaderNodeSeparateXYZ'); nt.links.new(tc.outputs['Generated'], sep.inputs[0])
+    mr = nt.nodes.new('ShaderNodeMapRange'); mr.inputs['From Min'].default_value = -0.05; mr.inputs['From Max'].default_value = 0.6
+    nt.links.new(sep.outputs['Z'], mr.inputs['Value'])
+    ramp = nt.nodes.new('ShaderNodeValToRGB'); el = ramp.color_ramp.elements
+    el[0].position = 0.0; el[0].color = (0.55, 0.28, 0.16, 1)
+    e = el.new(0.12); e.color = (0.22, 0.16, 0.3, 1)
+    el[1].position = 1.0; el[1].color = (0.012, 0.03, 0.12, 1)
+    nt.links.new(mr.outputs['Result'], ramp.inputs[0]); nt.links.new(ramp.outputs[0], bg.inputs['Color']); bg.inputs['Strength'].default_value = strength
+    nt.links.new(bg.outputs[0], out.inputs[0])
+    sun = bpy.data.objects.get('SUN')
+    if sun is None:
+        ld = bpy.data.lights.new('SUN', 'SUN'); sun = bpy.data.objects.new('SUN', ld); sc.collection.objects.link(sun)
+    sun.data.energy = sun_energy; sun.data.color = (0.55, 0.65, 1.0); sun.rotation_euler = (math.radians(55), 0, math.radians(60))
+    return sun
+
+def apply_bluehour_city(objs):
+    """Realistic 2040 city at blue hour (future_city_bluehour.webp): dark glass towers with many warm and cool lit windows,
+    gold-lit crowns, glowing spires, sodium-orange street light along the real roads."""
+    apply_future_materials(objs)
+    w = bpy.data.materials['MAT_Wall2040']; nt = w.node_tree
+    for n in nt.nodes:
+        if n.type == 'MATH' and n.operation == 'GREATER_THAN' and abs(n.inputs[1].default_value - 0.94) < 1e-3: n.inputs[1].default_value = 0.55
+        if n.type == 'MATH' and n.operation == 'MULTIPLY' and abs(n.inputs[1].default_value - 0.25) < 1e-3: n.inputs[1].default_value = 4.0
+    b = nt.nodes['Principled BSDF']; b.inputs['Emission Color'].default_value = (1.0, 0.68, 0.36, 1)
+    crown = P.new_mat('MAT_Crown', (0.35, 0.28, 0.12, 1), 0.2, 1.0, emission=(1.0, 0.72, 0.3, 1), estrength=2.2)
+    if 'CITY_CROWNS' in objs: objs['CITY_CROWNS'].material_slots[0].material = crown
+    if 'CITY_SPIRES' in objs: objs['CITY_SPIRES'].material_slots[0].material = P.new_mat('MAT_Spire', (0.8, 0.8, 0.8, 1), 0.3, 1.0, emission=(1.0, 0.86, 0.6, 1), estrength=6.0)
+    r = bpy.data.materials['MAT_Road2040']; rb = r.node_tree.nodes['Principled BSDF']; rb.inputs['Emission Color'].default_value = (1.0, 0.5, 0.16, 1)
+    for n in r.node_tree.nodes:
+        if n.type == 'MATH' and n.operation == 'MULTIPLY': n.inputs[1].default_value = 2.2
+        if n.type == 'VALTORGB': n.color_ramp.elements[0].position = 0.9; n.color_ramp.elements[1].position = 0.97
+
+def add_headphones(rig, color=(0.03, 0.03, 0.035, 1), accent=None):
+    """Aviation headset (helicopter_cabin_filming.webp) bone-parented to the head."""
+    import bmesh
+    from mathutils import Matrix
+    accent = accent or P.PAL['orange']
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=20, radius1=0.05, radius2=0.05, depth=0.035, matrix=Matrix.Translation((0.085, 0, 0)) @ Matrix.Rotation(math.radians(90), 4, 'Y'))
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=20, radius1=0.05, radius2=0.05, depth=0.035, matrix=Matrix.Translation((-0.085, 0, 0)) @ Matrix.Rotation(math.radians(90), 4, 'Y'))
+    for i in range(13):
+        a = math.radians(-90 + i * 15)
+        bmesh.ops.create_cube(bm, size=0.02, matrix=Matrix.Translation((0.095 * math.sin(a), 0, 0.1 * math.cos(a) + 0.0)))
+    me = bpy.data.meshes.new('HEADSET'); bm.to_mesh(me); bm.free()
+    ob = bpy.data.objects.new('HEADSET', me); bpy.context.scene.collection.objects.link(ob)
+    me.materials.append(P.new_mat('MAT_Headset', color, 0.35, 0.2)); me.materials.append(P.new_mat('MAT_HeadsetAccent', accent, 0.4))
+    for p in me.polygons:
+        if abs(me.vertices[p.vertices[0]].co.x) > 0.1: p.material_index = 1
+    bpy.context.view_layer.update()
+    hb = rig.pose.bones['head']; ob.parent = rig; ob.parent_type = 'BONE'; ob.parent_bone = 'head'
+    head_w = rig.matrix_world @ hb.matrix
+    ob.matrix_world = Matrix.Translation(head_w @ Vector((0, hb.length * 0.45, 0)) if False else (rig.matrix_world @ (hb.head + (hb.tail - hb.head) * 0.45)))
+    return ob
+
+
+def cabin_passenger(seat, F):
+    """The poster hero seated at the open door in a headset, phone raised in the right hand (helicopter_cabin_filming.webp).
+    Returns (rig, phone). Phone is parented to the seat at the posed hand."""
+    import character_anim as CA
+    col = link_asset('characters.blend', 'HERO'); rig = bpy.data.objects['RIG_HERO']
+    rig.parent = seat; rig.matrix_parent_inverse.identity(); rig.location = (0, -0.05, -0.5); rig.rotation_euler = (0, 0, 0)
+    CA.make_seated_pose(rig, 1, seat_height=0.5); CA.make_hold_phone_pose(rig, 1); CA.set_rot(rig, 'head', rx=10, frame=1)
+    CA.set_rot(rig, 'upper_arm.L', rx=55, ry=25, frame=1); CA.set_rot(rig, 'forearm.L', rx=45, frame=1)
+    bpy.context.view_layer.update()
+    add_headphones(rig)
+    hand = rig.matrix_world @ rig.pose.bones['hand.R'].tail
+    link_asset('phone.blend', 'PHONE'); phone = bpy.data.objects['PHONE_ROOT']
+    phone.parent = seat; phone.matrix_parent_inverse.identity(); phone.rotation_euler = (math.radians(-90), math.radians(90), 0)
+    bpy.context.view_layer.update()
+    phone.location = seat.matrix_world.inverted() @ hand + Vector((0.0, 0.06, 0.04))
+    # warm cabin practical so the hero reads against the blue-hour exterior
+    ld = bpy.data.lights.new('CABIN_PRACTICAL', 'AREA'); ld.energy = 40; ld.size = 0.8; ld.color = (1.0, 0.82, 0.62)
+    lo = bpy.data.objects.new('CABIN_PRACTICAL', ld); bpy.context.scene.collection.objects.link(lo); lo.parent = seat; lo.location = (0.0, -0.8, 1.2)
+    c = lo.constraints.new('TRACK_TO'); c.target = rig; c.track_axis = 'TRACK_NEGATIVE_Z'; c.up_axis = 'UP_Y'
+    return rig, phone
+
+def hover_helicopter(F, loc=(260, -210, 262)):
+    link_asset('helicopter.blend', 'HELICOPTER'); heli = bpy.data.objects['HELI_ROOT']
+    heli.location = loc; heli.rotation_euler = (math.radians(-1), 0, math.atan2(-210 - (-700), 260 - 600) - math.pi / 2)
+    for f, dz in ((1, 0), (F // 2, 0.5), (F, 0)):
+        heli.location.z = loc[2] + dz; heli.keyframe_insert('location', frame=f)
+    rot = bpy.data.objects['ROTOR_MAIN']; rot.rotation_euler = (0, 0, 0); rot.keyframe_insert('rotation_euler', frame=1)
+    rot.rotation_euler = (0, 0, math.radians(360 * 6 * F / 24)); rot.keyframe_insert('rotation_euler', frame=F)
+    for fc in rot.animation_data.action.fcurves:
+        for kp in fc.keyframe_points: kp.interpolation = 'LINEAR'
+    return heli, bpy.data.objects['HELI_PASSENGER_SEAT']

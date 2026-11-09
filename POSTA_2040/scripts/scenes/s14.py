@@ -7,9 +7,9 @@ import posta_lib as P, scene_lib as S
 def build(scn, quality):
     S.fresh(); F = scn['frames']
     # city far behind as a skyline (future style), seen from the harbour at dusk
-    objs = S.load_city('future', future=True); S.ocean_material_upgrade(dusk=True); S.apply_future_materials(objs)
-    S.world_dusk(strength=0.05, sun_elev=4, sun_az=262, sun_energy=0.8)
-    S.enable_mist(start=200, depth=1800, color=(0.12, 0.16, 0.26, 1), strength=0.6)
+    objs = S.load_city('future', future=True); S.ocean_material_upgrade(dusk=True); S.apply_bluehour_city(objs)
+    S.world_bluehour(sun_energy=0.3, strength=0.55)
+    S.enable_mist(start=200, depth=1800, color=(0.1, 0.1, 0.2, 1), strength=0.35)
     # product stage floating over the harbour water at (300,-250): a dark glossy disc
     stage = (300, -250, 1.5)
     bpy.ops.mesh.primitive_cylinder_add(radius=0.6, depth=0.04, location=stage); st = bpy.context.object; st.name = 'STAGE'

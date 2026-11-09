@@ -23,21 +23,14 @@ def heli_path(F):
     for o in (rot, tail):
         for fc in o.animation_data.action.fcurves:
             for kp in fc.keyframe_points: kp.interpolation = 'LINEAR'
-    # passenger (if characters exist)
-    cpath = os.path.join(P.ROOT, 'blender', 'assets', 'characters.blend')
-    if os.path.exists(cpath):
-        try:
-            pc = S.link_asset('characters.blend', 'PASSENGER'); proot = S.collection_root(pc)
-            seat = bpy.data.objects['HELI_PASSENGER_SEAT']; proot.parent = seat; proot.matrix_parent_inverse.identity()
-            proot.location = (0, 0, -0.45); proot.rotation_euler = (0, 0, 0)
-        except Exception as e: print('passenger skipped', e)
+    S.cabin_passenger(bpy.data.objects['HELI_PASSENGER_SEAT'], F)
     return root
 
 def build(scn, quality):
     S.fresh(); F = scn['frames']
-    objs = S.load_city('future', future=True, real_trees=True); S.ocean_material_upgrade(dusk=False); S.apply_future_materials(objs); S.terrain_urban_material()
-    S.world_golden(strength=0.06, sun_elev=20, sun_az=262, sun_energy=2.8)
-    S.enable_mist(start=400, depth=3000, color=(0.86, 0.78, 0.66, 1), strength=0.3)
+    objs = S.load_city('future', future=True, real_trees=True); S.ocean_material_upgrade(dusk=True); S.apply_bluehour_city(objs); S.terrain_urban_material()
+    S.world_bluehour(sun_energy=0.3, strength=0.55)
+    S.enable_mist(start=400, depth=3000, color=(0.1, 0.1, 0.2, 1), strength=0.35)
     heli = heli_path(F)
     # camera: from Kivukoni Front at 25 m straight up and back over the harbour, then swings to track the helicopter
     cam = P.add_camera(loc=(120, -40, 25), target=(-60, 120, 20), lens=32)

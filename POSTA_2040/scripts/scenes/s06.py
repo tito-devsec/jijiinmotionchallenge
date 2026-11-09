@@ -22,8 +22,8 @@ def add_vehicles(F):
 
 def build(scn, quality):
     S.fresh(); F = scn['frames']
-    objs = S.load_city('binary', crop=((50, 60), 900), future=True, real_trees=True); S.ocean_material_upgrade(dusk=False)
-    S.apply_future_materials(objs); S.terrain_urban_material()
+    objs = S.load_city('binary', crop=((50, 60), 900), future=True, real_trees=True); S.ocean_material_upgrade(dusk=True)
+    S.apply_bluehour_city(objs); S.terrain_urban_material()
     S.add_ferry(start=(120, -40), end=(520, -420), F=F)
     # the dissolving materials are replaced by future ones; binary modifier runs backwards so glyphs resolve into glass and steel
     b = objs['CITY_BUILDING']; mb = P.apply_binary(b, progress=1.0, density=0.15, size=1.4, noise_scale=0.02, seed=3, height_bias=0.5, band=0.15)
@@ -34,8 +34,8 @@ def build(scn, quality):
     r = objs['CITY_ROAD']; mr = P.apply_binary(r, progress=1.0, density=0.3, size=1.0, noise_scale=0.006, seed=11, height_bias=0.0, band=0.25)
     S.key_progress(mr, [(1, 1.0), (int(F * 0.4), 0.0), (F, 0.0)]); S.drive_flow(mr, speed=2.0); S.binary_off_after(mr, int(F * 0.4) + 2)
     add_vehicles(F)
-    S.world_golden(strength=0.05, sun_elev=16, sun_az=265, sun_energy=2.6)
-    S.enable_mist(start=350, depth=2600, color=(0.85, 0.78, 0.68, 1), strength=0.3)
+    S.world_bluehour(sun_energy=0.3, strength=0.55)
+    S.enable_mist(start=350, depth=2600, color=(0.1, 0.1, 0.2, 1), strength=0.35)
     cam = P.add_camera(loc=(-120, -120, 60), target=(-30, 100, 25), lens=35)
     S.cam_path(cam, [(1, (-120, -120, 60)), (F, (220, -160, 90))], [(1, (-30, 100, 25)), (F, (60, 90, 20))])
     P.setup_render(samples=28, frame_end=F); S.frame_range(scn)

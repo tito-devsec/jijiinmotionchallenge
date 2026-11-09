@@ -9,30 +9,11 @@ from mathutils import Vector
 
 def build(scn, quality):
     S.fresh(); F = scn['frames']
-    objs = S.load_city('future', future=True); S.ocean_material_upgrade(dusk=False); S.apply_future_materials(objs); S.terrain_urban_material()
-    S.world_golden(strength=0.06, sun_elev=20, sun_az=262, sun_energy=2.8)
-    S.enable_mist(start=400, depth=3000, color=(0.86, 0.78, 0.66, 1), strength=0.3)
-    S.link_asset('helicopter.blend', 'HELICOPTER'); heli = bpy.data.objects['HELI_ROOT']
-    heli.location = (260, -210, 262); heli.rotation_euler = (math.radians(-1), 0, math.atan2(-210 - (-700), 260 - 600) - math.pi / 2)
-    for f, dz in ((1, 0), (F // 2, 0.5), (F, 0)):
-        heli.location.z = 262 + dz; heli.keyframe_insert('location', frame=f)
-    rot = bpy.data.objects['ROTOR_MAIN']; rot.rotation_euler = (0, 0, 0); rot.keyframe_insert('rotation_euler', frame=1)
-    rot.rotation_euler = (0, 0, math.radians(360 * 6 * F / 24)); rot.keyframe_insert('rotation_euler', frame=F)
-    for fc in rot.animation_data.action.fcurves:
-        for kp in fc.keyframe_points: kp.interpolation = 'LINEAR'
-    seat = bpy.data.objects['HELI_PASSENGER_SEAT']
-    pcol = S.link_asset('characters.blend', 'PASSENGER'); prig = bpy.data.objects['RIG_PASSENGER']
-    prig.parent = seat; prig.matrix_parent_inverse.identity(); prig.location = (0, -0.05, -0.5); prig.rotation_euler = (0, 0, 0)
-    CA.make_seated_pose(prig, 1, seat_height=0.5); CA.make_hold_phone_pose(prig, 1); CA.set_rot(prig, 'head', rx=12, frame=1)
-    bpy.context.view_layer.update()
-    hand = prig.matrix_world @ prig.pose.bones['hand.R'].tail
-    S.link_asset('phone.blend', 'PHONE'); phone = bpy.data.objects['PHONE_ROOT']
-    # phone upright in landscape, screen toward the passenger (seat -Y), rear lens toward the open door / city (seat +Y)
-    phone.parent = seat; phone.matrix_parent_inverse.identity()
-    phone.rotation_euler = (math.radians(-90), math.radians(90), 0)
-    bpy.context.view_layer.update()
-    local_hand = seat.matrix_world.inverted() @ hand
-    phone.location = local_hand + Vector((0.0, 0.06, 0.04))
+    objs = S.load_city('future', future=True); S.ocean_material_upgrade(dusk=True); S.apply_bluehour_city(objs); S.terrain_urban_material()
+    S.world_bluehour(sun_energy=0.3, strength=0.55)
+    S.enable_mist(start=400, depth=3000, color=(0.1, 0.1, 0.2, 1), strength=0.35)
+    heli, seat = S.hover_helicopter(F)
+    rig, phone = S.cabin_passenger(seat, F)
     S.screen_sequence(seq_dir=os.path.join(P.ROOT, 'renders', 's09_ui'), strength=2.6)
     lens = Vector((0.0217, 0.0673, -0.0065))     # main lens centre, phone-local (back face is -Z)
     tgt = P.make_empty('CAM_TARGET', (0, 0, 0)); tgt.parent = phone
@@ -51,7 +32,7 @@ def build(scn, quality):
         cam.data.lens = l; cam.data.keyframe_insert('lens', frame=f)
     for f, s in ((1, 5.6), (int(F * 0.72), 8.0), (F, 11.0)):
         cam.data.dof.aperture_fstop = s; cam.data.dof.keyframe_insert('aperture_fstop', frame=f)
-    # soft cabin fill so the hand and phone read against the bright exterior
+    # soft fill on the phone
     ld = bpy.data.lights.new('CABIN_FILL', 'AREA'); ld.energy = 25; ld.size = 0.6; ld.color = (1.0, 0.9, 0.8)
     lo = bpy.data.objects.new('CABIN_FILL', ld); bpy.context.scene.collection.objects.link(lo); lo.parent = phone; lo.location = (-0.3, -0.4, 0.5)
     c = lo.constraints.new('TRACK_TO'); c.target = phone; c.track_axis = 'TRACK_NEGATIVE_Z'; c.up_axis = 'UP_Y'

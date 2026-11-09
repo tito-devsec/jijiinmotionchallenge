@@ -5,7 +5,7 @@
 cd "$(dirname "$0")/../.."
 MODE=${1:-preview}; B=/opt/blender/blender; RS="$PWD/scripts/rendering/render_scene.py"
 if [ "$MODE" = preview ]; then SUF=_preview; else SUF=""; fi
-declare -A STEP=( [s01]=2 [s02]=2 [s03]=3 [s04]=3 [s05]=2 [s06]=3 [s07]=3 [s08]=2 [s09]=3 [s10]=2 [s11]=3 [s12]=2 [s13]=2 [s14]=2 )
+declare -A STEP=( [s01]=2 [s02]=2 [s03]=3 [s04]=3 [s05]=2 [s06]=3 [s07]=3 [s08]=2 [s09]=3 [s09b]=2 [s10]=2 [s11]=3 [s12]=2 [s13]=2 [s14]=2 )
 [ "$MODE" = preview ] && for k in "${!STEP[@]}"; do STEP[$k]=3; done
 log(){ echo "$(date +%H:%M:%S) $*"; }
 clip(){ mkdir -p renders/clips; d=renders/$1; [ -d renders/$1_ui ] && d=renders/$1_ui
@@ -15,7 +15,7 @@ clip(){ mkdir -p renders/clips; d=renders/$1; [ -d renders/$1_ui ] && d=renders/
 scene(){ log start $1; $B -b --python $RS -- $1 $MODE ${STEP[$1]} 2>&1 | grep -E "\[$1\] done|Error:|Traceback"; }
 export POSTA_SCREEN_DIR="$PWD/renders/s09${SUF}_ui"
 scene s09; python3 scripts/rendering/overlay_ui.py camera renders/s09$SUF renders/s09${SUF}_ui >/dev/null && clip s09$SUF 1
-for sid in s01 s02 s03 s04 s05 s06 s07 s08 s10 s11 s12 s13 s14; do
+for sid in s01 s02 s03 s04 s05 s06 s07 s08 s09b s10 s11 s12 s13 s14; do
   scene $sid
   case $sid in
     s13) python3 scripts/rendering/overlay_ui.py social renders/s13$SUF renders/s13${SUF}_ui >/dev/null; clip s13$SUF 1 ;;

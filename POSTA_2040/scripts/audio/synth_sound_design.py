@@ -271,7 +271,7 @@ if __name__ == '__main__':
     write('s04_city_binary_amb', city_future_ambience(dur['s04'] + 2))
     write('s05_human_transform', digital_transform(dur['s05'] + 2, 0.5))
     write('s06_city_real_amb', city_future_ambience(dur['s06'] + dur['s07'] + 2))
-    write('s07_helicopter', helicopter(dur['s07'] + dur['s08'] + dur['s09'] + dur['s10'] * 0.5 + 2, True))
+    write('s07_helicopter', helicopter(dur['s07'] + dur['s08'] + dur['s09'] + dur.get('s09b', 0) + dur['s10'] * 0.5 + 2, True))
     write('s08_camera_ui', camera_ui(4))
     write('s08_lens_dive', lens_dive(3.5))
     write('s10_fall_splash', fall_and_splash(dur['s10'] + 3, dur['s10'] * 0.72))

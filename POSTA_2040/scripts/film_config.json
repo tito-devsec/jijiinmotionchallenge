@@ -1,20 +1,84 @@
 {
   "fps": 24,
-  "resolution": [1280, 720],
+  "resolution": [
+    1280,
+    720
+  ],
   "scenes": [
-    {"id": "s01", "title": "The city begins with construction", "frames": 264},
-    {"id": "s02", "title": "Buildings transform into binary", "frames": 240},
-    {"id": "s03", "title": "Roads become digital", "frames": 168},
-    {"id": "s04", "title": "Binary civilisation aerial", "frames": 216},
-    {"id": "s05", "title": "Humans: binary to real", "frames": 264},
-    {"id": "s06", "title": "Realistic futuristic city", "frames": 192},
-    {"id": "s07", "title": "Rise to the sky, helicopter", "frames": 192},
-    {"id": "s08", "title": "Infinix HOT 70 moment and lens dive", "frames": 216},
-    {"id": "s09", "title": "Through the camera", "frames": 168},
-    {"id": "s10", "title": "Phone falls into the ocean", "frames": 168},
-    {"id": "s11", "title": "Underwater world", "frames": 192},
-    {"id": "s12", "title": "The diver discovers the phone", "frames": 216},
-    {"id": "s13", "title": "I found something from tomorrow", "frames": 168},
-    {"id": "s14", "title": "Brand reveal", "frames": 168}
+    {
+      "id": "s01",
+      "title": "The city begins with construction",
+      "frames": 264
+    },
+    {
+      "id": "s02",
+      "title": "Buildings transform into binary",
+      "frames": 240
+    },
+    {
+      "id": "s03",
+      "title": "Roads become digital",
+      "frames": 168
+    },
+    {
+      "id": "s04",
+      "title": "Binary civilisation aerial",
+      "frames": 216
+    },
+    {
+      "id": "s05",
+      "title": "Humans: binary to real",
+      "frames": 264
+    },
+    {
+      "id": "s06",
+      "title": "Realistic futuristic city",
+      "frames": 192
+    },
+    {
+      "id": "s07",
+      "title": "Rise to the sky, helicopter",
+      "frames": 192
+    },
+    {
+      "id": "s08",
+      "title": "Infinix HOT 70 moment and lens dive",
+      "frames": 216
+    },
+    {
+      "id": "s09",
+      "title": "Through the camera",
+      "frames": 168
+    },
+    {
+      "id": "s09b",
+      "title": "Zoom out: inside the helicopter",
+      "frames": 120
+    },
+    {
+      "id": "s10",
+      "title": "Phone falls into the ocean",
+      "frames": 168
+    },
+    {
+      "id": "s11",
+      "title": "Underwater world",
+      "frames": 192
+    },
+    {
+      "id": "s12",
+      "title": "The diver discovers the phone",
+      "frames": 216
+    },
+    {
+      "id": "s13",
+      "title": "I found something from tomorrow",
+      "frames": 168
+    },
+    {
+      "id": "s14",
+      "title": "Brand reveal",
+      "frames": 168
+    }
   ]
 }

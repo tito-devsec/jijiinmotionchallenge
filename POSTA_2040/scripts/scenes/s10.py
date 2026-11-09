@@ -6,9 +6,9 @@ import posta_lib as P, scene_lib as S
 
 def build(scn, quality):
     S.fresh(); F = scn['frames']; fps = 24
-    objs = S.load_city('future', future=True, real_trees=True); S.ocean_material_upgrade(dusk=False); S.apply_future_materials(objs); S.terrain_urban_material()
-    S.world_golden(strength=0.06, sun_elev=20, sun_az=262, sun_energy=2.8)
-    S.enable_mist(start=500, depth=3500, color=(0.86, 0.78, 0.66, 1), strength=0.25)
+    objs = S.load_city('future', future=True, real_trees=True); S.ocean_material_upgrade(dusk=True); S.apply_bluehour_city(objs); S.terrain_urban_material()
+    S.world_bluehour(sun_energy=0.3, strength=0.55)
+    S.enable_mist(start=500, depth=3500, color=(0.1, 0.1, 0.2, 1), strength=0.35)
     S.link_asset('helicopter.blend', 'HELICOPTER'); heli = bpy.data.objects['HELI_ROOT']
     H = 262.0; heli.location = (260, -210, H); heli.rotation_euler = (0, 0, math.atan2(490, -340) - math.pi / 2)
     rot = bpy.data.objects['ROTOR_MAIN']; rot.rotation_euler = (0, 0, 0); rot.keyframe_insert('rotation_euler', frame=1)
@@ -16,6 +16,7 @@ def build(scn, quality):
     for fc in rot.animation_data.action.fcurves:
         for kp in fc.keyframe_points: kp.interpolation = 'LINEAR'
     S.link_asset('phone.blend', 'PHONE'); phone = bpy.data.objects['PHONE_ROOT']
+    S.screen_sequence(seq_dir=os.path.join(P.ROOT, 'renders', 's09_ui'), strength=2.6, offset=288)
     # analytic fall: starts at the door, hits water at ~72% of the scene (matches the splash in the audio stem)
     t_hit = 0.72 * F / fps; g = 9.81
     x0, y0, z0 = 262.5, -209.0, H - 0.4
