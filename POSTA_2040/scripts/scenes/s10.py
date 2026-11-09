@@ -36,12 +36,12 @@ def build(scn, quality):
         for kp in fc.keyframe_points: kp.interpolation = 'LINEAR'
     # chase camera: starts beside the passenger, swings out and rides ~1.3 m above/behind the phone, held above the water
     A = S.seat_cams(seat, rig, phone); cam_start = seat.matrix_world @ A['shoulder']
-    cam = P.add_camera(loc=tuple(cam_start), target=phone, lens=30, dof_target=phone, fstop=4.0)
+    cam = P.add_camera(loc=tuple(cam_start), target=phone, lens=26, dof_target=phone, fstop=5.6)
     fcs = phone.animation_data.action.fcurves
     ev = lambda f: Vector([next(fc for fc in fcs if fc.data_path == 'location' and fc.array_index == i).evaluate(f) for i in range(3)])
     for f in range(1, F + 1):
         p = ev(f); k = min(1.0, (f - 1) / 30.0); k = k * k * (3 - 2 * k)
-        follow = p + Vector((0, 0, 1.15)) - out * 0.9
+        follow = p - out * 1.6 + Vector((0, 0, 0.45))   # behind the phone, looking past it at the lit Posta skyline
         c = cam_start.lerp(follow, k); c.z = max(c.z, 1.6)
         cam.location = c; cam.keyframe_insert('location', frame=f)
     for fc in cam.animation_data.action.fcurves:
