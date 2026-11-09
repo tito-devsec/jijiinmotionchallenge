@@ -128,7 +128,18 @@ def mat_screen():
 
 MAT_FRAME = mat_frame(); MAT_DARK = mat_dark(); MAT_BACK = mat_back(); MAT_SCREEN = mat_screen()
 MAT_GLASS_BLACK = P.new_mat('MAT_PhoneGlassBlack', (0.01, 0.01, 0.012, 1), rough=0.03, coat=1.0)
-MAT_ISLAND = P.new_mat('MAT_PhoneIsland', (0.46, 0.54, 0.44, 1), rough=0.25, metal=0.9)
+MAT_ISLAND = P.new_mat('MAT_PhoneIsland', (0.62, 0.6, 0.72, 1), rough=0.18, metal=1.0)
+def _iridescent(m):
+    # lilac-to-silver-to-sage sheen that shifts with viewing angle, as on the HOT 70 camera-island rim (reference 6.webp)
+    nt = m.node_tree; b = nt.nodes['Principled BSDF']
+    lw = nt.nodes.new('ShaderNodeLayerWeight'); lw.inputs['Blend'].default_value = 0.45
+    ramp = nt.nodes.new('ShaderNodeValToRGB'); el = ramp.color_ramp.elements
+    el[0].position = 0.0; el[0].color = (0.78, 0.8, 0.82, 1)
+    el[1].position = 0.55; el[1].color = (0.62, 0.52, 0.86, 1)
+    e = el.new(0.85); e.color = (0.55, 0.72, 0.62, 1)
+    nt.links.new(lw.outputs['Facing'], ramp.inputs[0]); nt.links.new(ramp.outputs[0], b.inputs['Base Color'])
+    b.inputs['Coat Weight'].default_value = 0.5
+_iridescent(MAT_ISLAND)
 MAT_RING = P.new_mat('MAT_PhoneLensRing', (0.58, 0.60, 0.66, 1), rough=0.18, metal=1.0)
 MAT_LENS_GLASS = P.new_mat('MAT_PhoneLensGlass', (0.75, 0.85, 0.9, 1), rough=0.02, transmission=1.0, ior=1.5)
 MAT_LENS = P.new_mat('MAT_PhoneLensElement', (0.01, 0.012, 0.02, 1), rough=0.08, coat=0.8)
