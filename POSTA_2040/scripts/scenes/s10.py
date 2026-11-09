@@ -6,9 +6,9 @@ import posta_lib as P, scene_lib as S
 
 def build(scn, quality):
     S.fresh(); F = scn['frames']; fps = 24
-    objs = S.load_city('future'); S.ocean_material_upgrade(dusk=False); S.apply_future_materials(objs)
+    objs = S.load_city('future'); S.ocean_material_upgrade(dusk=False); S.apply_future_materials(objs); S.terrain_urban_material()
     S.world_golden(strength=0.06, sun_elev=20, sun_az=262, sun_energy=2.8)
-    S.enable_mist(start=300, depth=3000, color=(0.86, 0.78, 0.66, 1), strength=0.45)
+    S.enable_mist(start=300, depth=3000, color=(0.86, 0.78, 0.66, 1), strength=0.3)
     S.link_asset('helicopter.blend', 'HELICOPTER'); heli = bpy.data.objects['HELI_ROOT']
     H = 262.0; heli.location = (260, -210, H); heli.rotation_euler = (0, 0, math.atan2(490, -340) - math.pi / 2)
     rot = bpy.data.objects['ROTOR_MAIN']; rot.rotation_euler = (0, 0, 0); rot.keyframe_insert('rotation_euler', frame=1)

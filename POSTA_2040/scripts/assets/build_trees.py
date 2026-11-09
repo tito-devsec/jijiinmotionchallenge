@@ -314,14 +314,14 @@ def L(segs, ring, taper, jitter, gravity, photo, children, child_start, child_an
 
 SPECIES_PARAMS = {
     # columnar / oval broadleaf (lineup, 2nd-4th trees): straight trunk, canopy 2.8..10 m, oval
-    'BROADLEAF_A': dict(seed=101, trunk_len=4.2, trunk_r=0.2, levels=4, leaf_level=2, env=(6.6, 2.7, 3.7), cards_per_m=14, card_size=0.6, card_tilt=0.7, tip_cards=5, tip_r=0.7,
+    'BROADLEAF_A': dict(seed=101, trunk_len=4.2, trunk_r=0.2, levels=4, leaf_level=2, env=(6.6, 2.7, 3.7), cards_per_m=16, card_size=0.52, card_tilt=0.7, tip_cards=7, tip_r=0.7,
         leaf_tex='leaves_broad.png', bark_tex='bark_broad.png', bark_tint=(0.75, 0.72, 0.68, 1),
         level=[L(7, 12, 0.55, 0.05, 0.0, 0.3, (9, 12), 0.5, (35, 60), (0.75, 1.05), 0.6),
                L(5, 8, 0.4, 0.14, -0.02, 0.25, (5, 7), 0.3, (30, 55), (0.55, 0.8), 0.6),
                L(4, 5, 0.35, 0.22, -0.05, 0.12, (4, 6), 0.25, (30, 60), (0.5, 0.75), 0.55),
                L(3, 4, 0.3, 0.3, -0.08, 0.0, (0, 0), 0.3, (30, 60), (0.5, 0.7), 0.5)]),
     # rounder spreading broadleaf (lineup 1st / 5th tree): lower fork, broad crown
-    'BROADLEAF_B': dict(seed=202, trunk_len=3.2, trunk_r=0.23, levels=4, leaf_level=2, env=(6.4, 3.7, 3.5), cards_per_m=13, card_size=0.65, card_tilt=0.7, tip_cards=5, tip_r=0.75,
+    'BROADLEAF_B': dict(seed=202, trunk_len=3.2, trunk_r=0.23, levels=4, leaf_level=2, env=(6.4, 3.7, 3.5), cards_per_m=15, card_size=0.55, card_tilt=0.7, tip_cards=7, tip_r=0.75,
         leaf_tex='leaves_broad2.png', bark_tex='bark_broad.png', bark_tint=(0.7, 0.68, 0.66, 1),
         level=[L(6, 12, 0.6, 0.06, 0.0, 0.2, (7, 9), 0.55, (40, 70), (0.9, 1.3), 0.6),
                L(5, 8, 0.42, 0.14, -0.03, 0.3, (5, 7), 0.3, (30, 60), (0.55, 0.85), 0.6),
@@ -432,7 +432,7 @@ def build_conifer(tm, rng):
         tm.card(tip - Vector((0, 0, 0.1)), right, Vector((0, 0, 1)), 0.45, 0.7, rnd, anchor=0.5)
     return []
 
-def build_palm(tm, rng, fronds=14, H=8.2):
+def build_palm(tm, rng, fronds=16, H=8.2):
     """Coconut palm: curved ringed trunk, arching fronds built from a rib and many leaflet quads, coconuts."""
     lean = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), 0)).normalized()
     pts = []; radii = []; n = 14
@@ -451,17 +451,17 @@ def build_palm(tm, rng, fronds=14, H=8.2):
         roll += 2 * math.pi / fronds * rng.uniform(0.75, 1.25)
         # age: young fronds point up, old droop
         age = k / fronds
-        elev0 = math.radians(rng.uniform(55, 80) - 85 * (age ** 1.3))
+        elev0 = math.radians(rng.uniform(50, 75) - 95 * (age ** 1.1))
         d = Vector((math.cos(roll) * math.cos(elev0), math.sin(roll) * math.cos(elev0), math.sin(elev0)))
         Lf = rng.uniform(5.0, 6.0)
-        rib, rr = grow_branch(rng, crown_c, d, Lf, 0.07, 0.015, 8, 0.01, -0.16 if age < 0.85 else -0.22, 0.0)
+        rib, rr = grow_branch(rng, crown_c, d, Lf, 0.07, 0.015, 8, 0.01, -0.14 if age < 0.85 else -0.2, 0.0)
         tm.tube(rib, rr, seg=5)
         # leaflets
         nl = 40
         for i in range(nl):
             t = 0.22 + 0.78 * (i / nl)
             qp, qd, qr = point_on(rib, rr, t)
-            llen = (1.25 * math.sin(math.pi * min(1, (t - 0.15) / 0.9)) ** 0.5 + 0.2) * (1 - 0.45 * max(0, t - 0.75) / 0.25)
+            llen = (1.45 * math.sin(math.pi * min(1, (t - 0.15) / 0.9)) ** 0.5 + 0.2) * (1 - 0.45 * max(0, t - 0.75) / 0.25)
             for side in (-1, 1):
                 sidev = qd.cross(Vector((0, 0, 1))).normalized() * side
                 # leaflet dir: forward along rib, outward to the side, drooping
@@ -471,7 +471,7 @@ def build_palm(tm, rng, fronds=14, H=8.2):
                 rnd = (rng.random(), rng.random() * 0.5 + 0.3, 0.5)
                 c = qp + ld * llen * 0.5 + sidev * 0.02
                 # quad: along ld (u = 0..1 along blade), width across
-                w = 0.11 + 0.04 * (1 - t)
+                w = 0.14 + 0.05 * (1 - t)
                 bm = tm.leaf
                 a0 = qp + sidev * 0.02; a1 = a0 + ld * llen
                 perp = ld.cross(right).normalized() * (w / 2)
@@ -516,7 +516,7 @@ def add_fruit(tm, rng, branches, n, hang=False):
         tm.sphere(c, 0.075, rng.random(), scale=(0.85, 0.85, 1.2), subdiv=1)
 
 def palm_leaf_material():
-    m = leaf_material('MAT_PalmLeaflet', 'palm_leaflet.png', tint=(0.5, 0.66, 0.38, 1), translucency=0.3, rough=0.4, hue_var=0.04)
+    m = leaf_material('MAT_PalmLeaflet', 'palm_leaflet.png', tint=(0.36, 0.52, 0.27, 1), translucency=0.2, rough=0.45, hue_var=0.04)
     # dead fronds: leafrand R ~0.95 & G ~0.05 -> brown. Patch the hue node: use G channel as saturation driver
     nt = m.node_tree
     hsv = next(n for n in nt.nodes if n.type == 'HUE_SAT'); sep = next(n for n in nt.nodes if n.type == 'SEPARATE_COLOR')
@@ -606,13 +606,13 @@ def preview_lineup(out=os.path.join(PREVIEWS, 'asset_trees_lineup.png'), samples
     P.add_camera('CAM_lineup', loc=(4, -80, 8.5), target=(0, 0, 5.4), lens=35)
     bpy.ops.render.render(write_still=True); print('rendered', out)
 
-def preview_closeup(out=os.path.join(PREVIEWS, 'asset_tree_mango_closeup.png'), samples=48):
+def preview_closeup(out=os.path.join(PREVIEWS, 'asset_tree_mango_closeup.png'), samples=48, species='MANGO'):
     sc = bpy.context.scene
     for i, name in enumerate(SPECIES):
         for o in bpy.data.collections[f'TREE_{name}'].objects:
-            if o.parent is None: o.hide_render = name != 'MANGO'
-            for c in o.children_recursive: c.hide_render = name != 'MANGO'
-    root = bpy.data.objects['TREE_MANGO_ROOT']
+            if o.parent is None: o.hide_render = name != species
+            for c in o.children_recursive: c.hide_render = name != species
+    root = bpy.data.objects[f'TREE_{species}_ROOT']
     P.setup_world(sun_rot=(math.radians(55), 0, math.radians(-60)), sun_energy=3.5, sky=True, sky_strength=0.7, sun_elev=45, sun_az=200)
     P.setup_render((1280, 720), samples=samples, out=out)
     sc.cycles.transparent_max_bounces = 16
@@ -629,4 +629,6 @@ if __name__ == '__main__':
         if '--lineup' in argv or '--preview' in argv:
             bpy.data.objects.remove(bpy.data.objects['CAM_lineup'])
         preview_closeup(samples=smp)
+    if '--closeup-species' in argv:  # e.g. -- --closeup-species PALM /path/out.png
+        i = argv.index('--closeup-species'); preview_closeup(out=argv[i + 2], samples=smp, species=argv[i + 1])
     print('REPORT', rep)

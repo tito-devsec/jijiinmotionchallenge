@@ -35,9 +35,9 @@ def heli_path(F):
 
 def build(scn, quality):
     S.fresh(); F = scn['frames']
-    objs = S.load_city('future'); S.ocean_material_upgrade(dusk=False); S.apply_future_materials(objs)
+    objs = S.load_city('future'); S.ocean_material_upgrade(dusk=False); S.apply_future_materials(objs); S.terrain_urban_material()
     S.world_golden(strength=0.06, sun_elev=20, sun_az=262, sun_energy=2.8)
-    S.enable_mist(start=400, depth=3000, color=(0.86, 0.78, 0.66, 1), strength=0.5)
+    S.enable_mist(start=400, depth=3000, color=(0.86, 0.78, 0.66, 1), strength=0.3)
     heli = heli_path(F)
     # camera: from Kivukoni Front at 25 m straight up and back over the harbour, then swings to track the helicopter
     cam = P.add_camera(loc=(120, -40, 25), target=(-60, 120, 20), lens=32)

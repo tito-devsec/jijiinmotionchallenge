@@ -121,12 +121,12 @@ def road_lane_material():
     """2040 road: dark asphalt with pulsing turquoise guidance lines along the surface (procedural, noise-based)."""
     m = P.new_mat('MAT_Road2040', (0.03, 0.035, 0.045, 1), 0.3, 0.1); nt = m.node_tree; b = nt.nodes['Principled BSDF']
     tc = nt.nodes.new('ShaderNodeTexCoord'); wave = nt.nodes.new('ShaderNodeTexWave'); wave.wave_type = 'BANDS'; wave.bands_direction = 'DIAGONAL'
-    wave.inputs['Scale'].default_value = 0.25; wave.inputs['Distortion'].default_value = 0.0
+    wave.inputs['Scale'].default_value = 0.12; wave.inputs['Distortion'].default_value = 0.0
     nt.links.new(tc.outputs['Object'], wave.inputs['Vector'])
-    ramp = nt.nodes.new('ShaderNodeValToRGB'); ramp.color_ramp.elements[0].position = 0.93; ramp.color_ramp.elements[1].position = 0.97
+    ramp = nt.nodes.new('ShaderNodeValToRGB'); ramp.color_ramp.elements[0].position = 0.96; ramp.color_ramp.elements[1].position = 0.985
     nt.links.new(wave.outputs['Fac'], ramp.inputs[0])
     b.inputs['Emission Color'].default_value = P.PAL['turq']
-    mul = nt.nodes.new('ShaderNodeMath'); mul.operation = 'MULTIPLY'; mul.inputs[1].default_value = 2.5
+    mul = nt.nodes.new('ShaderNodeMath'); mul.operation = 'MULTIPLY'; mul.inputs[1].default_value = 0.9
     nt.links.new(ramp.outputs[0], mul.inputs[0]); nt.links.new(mul.outputs[0], b.inputs['Emission Strength'])
     return m
 
@@ -145,11 +145,11 @@ def facade_2040_material():
     noise = nt.nodes.new('ShaderNodeTexWhiteNoise'); noise.noise_dimensions = '3D'
     snap = nt.nodes.new('ShaderNodeVectorMath'); snap.operation = 'SNAP'; snap.inputs[1].default_value = (2.2 / 0.35 * 0.5, 2.2 / 0.35 * 0.5, 1.0 / 0.35)
     nt.links.new(tc.outputs['Object'], snap.inputs[0]); nt.links.new(snap.outputs[0], noise.inputs['Vector'])
-    gt = nt.nodes.new('ShaderNodeMath'); gt.operation = 'GREATER_THAN'; gt.inputs[1].default_value = 0.72
+    gt = nt.nodes.new('ShaderNodeMath'); gt.operation = 'GREATER_THAN'; gt.inputs[1].default_value = 0.85
     nt.links.new(noise.outputs['Value'], gt.inputs[0])
     isw = nt.nodes.new('ShaderNodeMath'); isw.operation = 'LESS_THAN'; isw.inputs[1].default_value = 0.5; nt.links.new(brick.outputs['Fac'], isw.inputs[0])
     both = nt.nodes.new('ShaderNodeMath'); both.operation = 'MULTIPLY'; nt.links.new(gt.outputs[0], both.inputs[0]); nt.links.new(isw.outputs[0], both.inputs[1])
-    es = nt.nodes.new('ShaderNodeMath'); es.operation = 'MULTIPLY'; es.inputs[1].default_value = 3.0; nt.links.new(both.outputs[0], es.inputs[0])
+    es = nt.nodes.new('ShaderNodeMath'); es.operation = 'MULTIPLY'; es.inputs[1].default_value = 0.6; nt.links.new(both.outputs[0], es.inputs[0])
     b.inputs['Emission Color'].default_value = (1.0, 0.75, 0.45, 1); nt.links.new(es.outputs[0], b.inputs['Emission Strength'])
     return m
 
@@ -177,3 +177,18 @@ def enable_mist(start=200, depth=1500, color=(0.35, 0.5, 0.8, 1), strength=0.7):
     except Exception:
         glare.threshold = 1.2
     nt.links.new(mix.outputs[0], glare.inputs[0]); nt.links.new(glare.outputs[0], comp.inputs[0])
+
+def terrain_urban_material():
+    """Urban ground: concrete/paving mixed with grass patches by large-scale noise."""
+    m = P.new_mat('MAT_Terrain', (0.3, 0.3, 0.28, 1), 0.9); nt = m.node_tree; b = nt.nodes['Principled BSDF']
+    tc = nt.nodes.new('ShaderNodeTexCoord'); n1 = nt.nodes.new('ShaderNodeTexNoise'); n1.inputs['Scale'].default_value = 0.012; n1.inputs['Detail'].default_value = 4
+    nt.links.new(tc.outputs['Object'], n1.inputs['Vector'])
+    ramp = nt.nodes.new('ShaderNodeValToRGB'); ramp.color_ramp.elements[0].position = 0.42; ramp.color_ramp.elements[0].color = (0.33, 0.32, 0.3, 1)
+    ramp.color_ramp.elements[1].position = 0.58; ramp.color_ramp.elements[1].color = (0.07, 0.16, 0.05, 1)
+    nt.links.new(n1.outputs['Fac'], ramp.inputs[0]); nt.links.new(ramp.outputs[0], b.inputs['Base Color'])
+    return m
+
+def snap_to_road(x, y):
+    import numpy as np
+    o = bpy.data.objects['CITY_ROAD']; co = np.empty(len(o.data.vertices) * 3); o.data.vertices.foreach_get('co', co); co = co.reshape(-1, 3)
+    i = np.hypot(co[:, 0] - x, co[:, 1] - y).argmin(); return (float(co[i, 0]), float(co[i, 1]), float(co[i, 2]))

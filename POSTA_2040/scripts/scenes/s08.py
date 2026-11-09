@@ -7,9 +7,9 @@ import posta_lib as P, scene_lib as S
 
 def build(scn, quality):
     S.fresh(); F = scn['frames']
-    objs = S.load_city('future'); S.ocean_material_upgrade(dusk=False); S.apply_future_materials(objs)
+    objs = S.load_city('future'); S.ocean_material_upgrade(dusk=False); S.apply_future_materials(objs); S.terrain_urban_material()
     S.world_golden(strength=0.06, sun_elev=20, sun_az=262, sun_energy=2.8)
-    S.enable_mist(start=400, depth=3000, color=(0.86, 0.78, 0.66, 1), strength=0.5)
+    S.enable_mist(start=400, depth=3000, color=(0.86, 0.78, 0.66, 1), strength=0.3)
     S.link_asset('helicopter.blend', 'HELICOPTER'); heli = bpy.data.objects['HELI_ROOT']
     heli.location = (260, -210, 262); heli.rotation_euler = (math.radians(-1), 0, math.atan2(-210 - (-700), 260 - 600) - math.pi / 2)
     # gentle hover bob

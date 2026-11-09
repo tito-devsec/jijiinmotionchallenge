@@ -9,7 +9,8 @@ def add_vehicles(F):
     if not os.path.exists(path): return
     col = S.link_asset('roadster.blend', 'ROADSTER')
     # cars gliding along Kivukoni Front (approx straight segment from (-60,60) to (260,-20)) and Azikiwe
-    routes = [((-60, 62), (270, -25)), ((250, -18), (-70, 70)), ((-135, 210), (-20, 60))]
+    routes = [((-20, 95), (180, 30)), ((170, 32), (-30, 97)), ((-135, 210), (-60, 110))]
+    routes = [(S.snap_to_road(*a)[:2], S.snap_to_road(*b)[:2]) for a, b in routes]
     for i, (a, b) in enumerate(routes):
         e = S.instance_collection(col, f'CAR_{i}', loc=(a[0], a[1], P.ground_z(*a) + 0.05))
         ang = math.atan2(b[1] - a[1], b[0] - a[0]) - math.pi / 2
@@ -22,7 +23,7 @@ def add_vehicles(F):
 def build(scn, quality):
     S.fresh(); F = scn['frames']
     objs = S.load_city('binary', crop=((50, 60), 900)); S.ocean_material_upgrade(dusk=False)
-    S.apply_future_materials(objs)
+    S.apply_future_materials(objs); S.terrain_urban_material()
     # the dissolving materials are replaced by future ones; binary modifier runs backwards so glyphs resolve into glass and steel
     b = objs['CITY_BUILDING']; mb = P.apply_binary(b, progress=1.0, density=0.15, size=1.4, noise_scale=0.02, seed=3, height_bias=0.5, band=0.15)
     S.key_progress(mb, [(1, 1.0), (int(F * 0.45), 0.0), (F, 0.0)]); S.drive_flow(mb, speed=0.8)
@@ -30,7 +31,7 @@ def build(scn, quality):
     S.key_progress(mr, [(1, 1.0), (int(F * 0.4), 0.0), (F, 0.0)]); S.drive_flow(mr, speed=2.0)
     add_vehicles(F)
     S.world_golden(strength=0.05, sun_elev=16, sun_az=265, sun_energy=2.6)
-    S.enable_mist(start=250, depth=2200, color=(0.85, 0.75, 0.62, 1), strength=0.55)
+    S.enable_mist(start=350, depth=2600, color=(0.85, 0.78, 0.68, 1), strength=0.3)
     cam = P.add_camera(loc=(-120, -120, 60), target=(-30, 100, 25), lens=35)
     S.cam_path(cam, [(1, (-120, -120, 60)), (F, (220, -160, 90))], [(1, (-30, 100, 25)), (F, (60, 90, 20))])
     P.setup_render(samples=28, frame_end=F); S.frame_range(scn)
