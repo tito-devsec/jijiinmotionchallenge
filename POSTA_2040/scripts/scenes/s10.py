@@ -8,7 +8,7 @@ def build(scn, quality):
     S.fresh(); F = scn['frames']; fps = 24
     objs = S.load_city('future', future=True, real_trees=True); S.ocean_material_upgrade(dusk=False); S.apply_future_materials(objs); S.terrain_urban_material()
     S.world_golden(strength=0.06, sun_elev=20, sun_az=262, sun_energy=2.8)
-    S.enable_mist(start=300, depth=3000, color=(0.86, 0.78, 0.66, 1), strength=0.3)
+    S.enable_mist(start=500, depth=3500, color=(0.86, 0.78, 0.66, 1), strength=0.25)
     S.link_asset('helicopter.blend', 'HELICOPTER'); heli = bpy.data.objects['HELI_ROOT']
     H = 262.0; heli.location = (260, -210, H); heli.rotation_euler = (0, 0, math.atan2(490, -340) - math.pi / 2)
     rot = bpy.data.objects['ROTOR_MAIN']; rot.rotation_euler = (0, 0, 0); rot.keyframe_insert('rotation_euler', frame=1)
@@ -34,10 +34,20 @@ def build(scn, quality):
         phone.rotation_euler = (math.radians(70) + 7.5 * t, 4.2 * t, 2.8 * t); phone.keyframe_insert('rotation_euler', frame=f)
     for fc in phone.animation_data.action.fcurves:
         for kp in fc.keyframe_points: kp.interpolation = 'LINEAR'
-    # camera: from the door looking down at the falling phone, following it down, ending just above the water at the splash
-    cam = P.add_camera(loc=(263.4, -210.2, H - 0.2), target=phone, lens=35, dof_target=phone, fstop=2.8)
-    keys = [(1, (263.4, -210.2, H - 0.2)), (int(F * 0.3), (266, -205, H - 60)), (int(F * 0.6), (268, -200, 40)), (int(F * 0.72), (267, -203, 3.0)), (F, (266, -203, -1.5))]
-    S.cam_path(cam, keys)
+    # chase camera baked per frame from the same fall: starts at the door, settles ~1.3 m above/behind the tumbling phone
+    # looking down at the harbour, and is held above the waterline for the splash
+    cam = P.add_camera(loc=(263.4, -210.2, H - 0.2), target=phone, lens=30, dof_target=phone, fstop=4.0)
+    door = (263.4 - x0, -210.2 - y0, (H - 0.2) - z0)
+    for f in range(1, F + 1):
+        t = (f - 1) / fps
+        ph = phone.animation_data.action.fcurves
+        px, py, pz = (next(fc for fc in ph if fc.data_path == 'location' and fc.array_index == i).evaluate(f) for i in range(3))
+        k = min(1.0, t / 1.2); k = k * k * (3 - 2 * k)
+        off = (door[0] * (1 - k) + 0.55 * k, door[1] * (1 - k) - 0.95 * k, door[2] * (1 - k) + 1.05 * k)
+        cz = max(pz + off[2], 1.6)
+        cam.location = (px + off[0], py + off[1], cz); cam.keyframe_insert('location', frame=f)
+    for fc in cam.animation_data.action.fcurves:
+        for kp in fc.keyframe_points: kp.interpolation = 'LINEAR'
     # splash: expanding ring + spray spheres at the impact point (simple procedural, keyed scale)
     hit = (x0 + 2.5 * t_hit, y0 + 1.5 * t_hit, 0.42); fh = int(0.72 * F)
     bpy.ops.mesh.primitive_torus_add(location=hit, major_radius=0.3, minor_radius=0.08); ring = bpy.context.object; ring.name = 'SPLASH_RING'

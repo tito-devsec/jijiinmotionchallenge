@@ -9,10 +9,10 @@ def build(scn, quality):
     S.fresh(); F = scn['frames']
     objs = S.load_city('binary', crop=((-140, 190), 380), future=True)
     S.ocean_material_upgrade(dusk=True)
-    for n, dens, size in (('CITY_BUILDING', 0.35, 0.9), ('CITY_CROWNS', 0.3, 1.0), ('CITY_SPIRES', 0.3, 0.8), ('CITY_TREE', 0.4, 0.5)):
+    for n, dens, size in (('CITY_BUILDING', 0.06, 1.2), ('CITY_CROWNS', 0.06, 1.2), ('CITY_SPIRES', 0.06, 1.0), ('CITY_TREE', 0.08, 0.6)):
         if n in objs:
             m = P.apply_binary(objs[n], progress=1.0, density=dens, size=size, noise_scale=0.025, seed=3, height_bias=0.5); S.drive_flow(m, speed=0.8)
-    mr = P.apply_binary(objs['CITY_ROAD'], progress=1.0, density=0.8, size=0.5, noise_scale=0.008, seed=11, height_bias=0.0, band=0.25); S.drive_flow(mr, speed=2.0)
+    mr = P.apply_binary(objs['CITY_ROAD'], progress=1.0, density=0.25, size=0.22, noise_scale=0.008, seed=11, height_bias=0.0, band=0.25); S.drive_flow(mr, speed=2.0)
     (rx, ry, rz), (dx, dy) = S.road_frame(-150, 185)
     head = math.atan2(dy, dx) - math.pi / 2
     walk = 1.3 / 24.0  # m per frame
@@ -43,4 +43,9 @@ def build(scn, quality):
     end = -6 + walk * F
     S.cam_path(cam, [(1, (g(-8, 3.4)[0], g(-8, 3.4)[1], rz + 1.3)), (int(F * 0.5), (g(end * 0.4, 3.0)[0], g(end * 0.4, 3.0)[1], rz + 1.5)), (F, (g(end + 1.6, 1.4)[0], g(end + 1.6, 1.4)[1], rz + 1.6))])
     cam.data.lens = 35; cam.data.keyframe_insert('lens', frame=1); cam.data.lens = 55; cam.data.keyframe_insert('lens', frame=F)
+    # soft key + rim light travelling with the hero so the face reads as it resolves
+    for nm, off, e, col in (('KEY_HERO', (-1.6, 1.2, 1.9), 120, (1.0, 0.86, 0.72)), ('RIM_HERO', (1.4, -1.5, 2.1), 160, P.PAL['turq'][:3])):
+        ld = bpy.data.lights.new(nm, 'AREA'); ld.energy = e; ld.size = 1.2; ld.color = col
+        lo = bpy.data.objects.new(nm, ld); bpy.context.scene.collection.objects.link(lo); lo.parent = hero; lo.location = off
+        c = lo.constraints.new('TRACK_TO'); c.target = tgt; c.track_axis = 'TRACK_NEGATIVE_Z'; c.up_axis = 'UP_Y'
     P.setup_render(samples=28, frame_end=F); S.frame_range(scn)
