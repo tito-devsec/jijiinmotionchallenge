@@ -17,6 +17,7 @@ import kit_lib as K    # noqa: E402
 TEX = os.path.join(ROOT, 'assets', 'textures')
 OUT_BLEND = os.path.join(ROOT, 'blender', 'assets', 'trees.blend')
 PREVIEWS = os.path.join(ROOT, 'previews')
+NOMINAL_H = 10.0
 SPECIES = ['BROADLEAF_A', 'BROADLEAF_B', 'MANGO', 'MANGO_SPREAD', 'UMBRELLA', 'CONIFER', 'PALM']
 
 # ----------------------------------------------------------------------------- materials
@@ -305,32 +306,32 @@ def L(segs, ring, taper, jitter, gravity, photo, children, child_start, child_an
 
 SPECIES_PARAMS = {
     # columnar / oval broadleaf (lineup, 2nd-4th trees): straight trunk, canopy 2.8..10 m, oval
-    'BROADLEAF_A': dict(seed=101, trunk_len=4.2, trunk_r=0.19, levels=4, leaf_level=2, env=(6.6, 2.6, 3.6), cards_per_m=5.5, card_size=0.95, card_tilt=0.7,
+    'BROADLEAF_A': dict(seed=101, trunk_len=4.2, trunk_r=0.2, levels=4, leaf_level=2, env=(6.6, 2.7, 3.7), cards_per_m=16, card_size=0.6, card_tilt=0.7,
         leaf_tex='leaves_broad.png', bark_tex='bark_broad.png', bark_tint=(0.75, 0.72, 0.68, 1),
-        level=[L(7, 12, 0.55, 0.05, 0.0, 0.3, (6, 8), 0.55, (35, 60), (0.75, 1.05), 0.62),
-               L(5, 8, 0.4, 0.14, -0.02, 0.25, (4, 6), 0.3, (30, 55), (0.55, 0.8), 0.6),
-               L(4, 5, 0.35, 0.22, -0.05, 0.12, (3, 5), 0.25, (30, 60), (0.5, 0.75), 0.55),
+        level=[L(7, 12, 0.55, 0.05, 0.0, 0.3, (9, 12), 0.5, (35, 60), (0.75, 1.05), 0.6),
+               L(5, 8, 0.4, 0.14, -0.02, 0.25, (5, 7), 0.3, (30, 55), (0.55, 0.8), 0.6),
+               L(4, 5, 0.35, 0.22, -0.05, 0.12, (4, 6), 0.25, (30, 60), (0.5, 0.75), 0.55),
                L(3, 4, 0.3, 0.3, -0.08, 0.0, (0, 0), 0.3, (30, 60), (0.5, 0.7), 0.5)]),
     # rounder spreading broadleaf (lineup 1st / 5th tree): lower fork, broad crown
-    'BROADLEAF_B': dict(seed=202, trunk_len=3.2, trunk_r=0.22, levels=4, leaf_level=2, env=(6.4, 3.6, 3.4), cards_per_m=5.0, card_size=1.05, card_tilt=0.7,
+    'BROADLEAF_B': dict(seed=202, trunk_len=3.2, trunk_r=0.23, levels=4, leaf_level=2, env=(6.4, 3.7, 3.5), cards_per_m=15, card_size=0.65, card_tilt=0.7,
         leaf_tex='leaves_broad2.png', bark_tex='bark_broad.png', bark_tint=(0.7, 0.68, 0.66, 1),
-        level=[L(6, 12, 0.6, 0.06, 0.0, 0.2, (5, 7), 0.6, (40, 70), (0.9, 1.3), 0.6),
-               L(5, 8, 0.42, 0.14, -0.03, 0.3, (4, 6), 0.3, (30, 60), (0.55, 0.85), 0.6),
-               L(4, 5, 0.35, 0.22, -0.06, 0.12, (3, 5), 0.25, (30, 65), (0.5, 0.75), 0.55),
+        level=[L(6, 12, 0.6, 0.06, 0.0, 0.2, (7, 9), 0.55, (40, 70), (0.9, 1.3), 0.6),
+               L(5, 8, 0.42, 0.14, -0.03, 0.3, (5, 7), 0.3, (30, 60), (0.55, 0.85), 0.6),
+               L(4, 5, 0.35, 0.22, -0.06, 0.12, (4, 6), 0.25, (30, 65), (0.5, 0.75), 0.55),
                L(3, 4, 0.3, 0.3, -0.08, 0.0, (0, 0), 0.3, (30, 60), (0.5, 0.7), 0.5)]),
     # dense round mango: short thick dark trunk, 4-6 scaffolds, very dense canopy almost to the ground
-    'MANGO': dict(seed=303, trunk_len=2.0, trunk_r=0.3, levels=4, leaf_level=2, env=(6.3, 4.4, 3.9), cards_per_m=7.0, card_size=1.0, card_tilt=0.6, fruit=60,
+    'MANGO': dict(seed=303, trunk_len=2.2, trunk_r=0.32, levels=4, leaf_level=2, env=(6.3, 4.4, 3.9), cards_per_m=18, card_size=0.62, card_tilt=0.6, fruit=60,
         leaf_tex='leaves_mango.png', bark_tex='bark_mango.png', bark_tint=(0.6, 0.55, 0.55, 1),
-        level=[L(4, 14, 0.75, 0.05, 0.0, 0.0, (5, 6), 0.5, (35, 60), (1.6, 2.2), 0.62),
-               L(5, 8, 0.45, 0.12, -0.02, 0.2, (4, 6), 0.3, (30, 60), (0.6, 0.9), 0.6),
-               L(4, 5, 0.35, 0.2, -0.05, 0.1, (3, 5), 0.25, (30, 65), (0.55, 0.8), 0.55),
+        level=[L(4, 14, 0.75, 0.05, 0.0, 0.0, (6, 7), 0.5, (35, 60), (1.6, 2.2), 0.62),
+               L(5, 8, 0.45, 0.12, -0.02, 0.2, (5, 7), 0.3, (30, 60), (0.6, 0.9), 0.6),
+               L(4, 5, 0.35, 0.2, -0.05, 0.1, (4, 6), 0.25, (30, 65), (0.55, 0.8), 0.55),
                L(3, 4, 0.3, 0.3, -0.1, 0.0, (0, 0), 0.3, (30, 60), (0.5, 0.7), 0.5)]),
     # spreading mango: fork at 1.3 m into 3 leaders, crown wider than tall, hanging fruit
-    'MANGO_SPREAD': dict(seed=404, trunk_len=1.3, trunk_r=0.3, levels=4, leaf_level=2, env=(6.4, 5.6, 3.6), cards_per_m=6.0, card_size=1.0, card_tilt=0.6, fruit=90, fruit_hang=True,
+    'MANGO_SPREAD': dict(seed=404, trunk_len=1.3, trunk_r=0.32, levels=4, leaf_level=2, env=(6.4, 5.6, 3.6), cards_per_m=16, card_size=0.62, card_tilt=0.6, fruit=90, fruit_hang=True,
         leaf_tex='leaves_mango.png', bark_tex='bark_mango.png', bark_tint=(0.72, 0.68, 0.62, 1),
         level=[L(3, 14, 0.85, 0.03, 0.0, 0.0, (3, 3), 0.9, (30, 45), (2.4, 3.0), 0.7),
-               L(6, 8, 0.4, 0.1, -0.03, 0.1, (4, 6), 0.3, (35, 65), (0.55, 0.85), 0.6),
-               L(4, 5, 0.35, 0.2, -0.06, 0.1, (3, 5), 0.25, (30, 65), (0.55, 0.8), 0.55),
+               L(6, 8, 0.4, 0.1, -0.03, 0.1, (6, 8), 0.3, (35, 65), (0.55, 0.85), 0.6),
+               L(4, 5, 0.35, 0.2, -0.06, 0.1, (4, 6), 0.25, (30, 65), (0.55, 0.8), 0.55),
                L(3, 4, 0.3, 0.3, -0.1, 0.0, (0, 0), 0.3, (30, 60), (0.5, 0.7), 0.5)]),
 }
 
@@ -338,13 +339,13 @@ SPECIES_PARAMS = {
 def build_umbrella(tm, rng):
     """Acacia-like: thick trunk, heavy outward scaffolds, each ending in a flat umbrella-shaped foliage disc."""
     branches = []
-    trunk_pts, trunk_r = grow_branch(rng, (0, 0, 0), (0.03, 0.0, 1), 3.4, 0.42, 0.3, 5, 0.03, 0.0, 0.0)
+    trunk_pts, trunk_r = grow_branch(rng, (0, 0, 0), (0.03, 0.0, 1), 4.0, 0.55, 0.4, 5, 0.03, 0.0, 0.0)
     tm.tube(trunk_pts, trunk_r, seg=16, v_scale=1.0)
-    tm.tube([Vector((0, 0, -0.05)), Vector((0, 0, 0.35)), Vector((0, 0, 0.9))], [0.7, 0.52, 0.43], seg=16, cap=False)
+    tm.tube([Vector((0, 0, -0.05)), Vector((0, 0, 0.35)), Vector((0, 0, 0.9))], [0.9, 0.68, 0.56], seg=16, cap=False)
     # buttress ridges
     for k in range(6):
         a = 2 * math.pi * k / 6 + rng.uniform(-0.2, 0.2); d = Vector((math.cos(a), math.sin(a), 0))
-        tm.tube([d * 0.75 + Vector((0, 0, -0.02)), d * 0.5 + Vector((0, 0, 0.35)), d * 0.32 + Vector((0, 0, 1.0))], [0.08, 0.12, 0.09], seg=6)
+        tm.tube([d * 0.95 + Vector((0, 0, -0.02)), d * 0.68 + Vector((0, 0, 0.35)), d * 0.45 + Vector((0, 0, 1.0))], [0.1, 0.15, 0.11], seg=6)
     n_sc = 7; roll = rng.uniform(0, 6.28)
     tops = []
     for k in range(n_sc):
@@ -352,7 +353,7 @@ def build_umbrella(tm, rng):
         t = rng.uniform(0.55, 1.0); pp, pd, pr = point_on(trunk_pts, trunk_r, t)
         elev = math.radians(rng.uniform(20, 45)) if k < n_sc - 1 else math.radians(75)  # last one is the central leader
         d = Vector((math.cos(roll) * math.cos(elev), math.sin(roll) * math.cos(elev), math.sin(elev)))
-        length = rng.uniform(3.6, 5.2) if k < n_sc - 1 else 3.2
+        length = rng.uniform(4.2, 5.8) if k < n_sc - 1 else 3.8
         pts, radii = grow_branch(rng, pp, d, length, pr * 0.55, 0.08, 6, 0.06, 0.03, 0.08)  # lifts upward at the end
         tm.tube(pts, radii, seg=8)
         # secondary scaffolds splitting from the primary
@@ -371,11 +372,11 @@ def build_umbrella(tm, rng):
             a = 2 * math.pi * j / 10 + rng.uniform(-0.2, 0.2); d = Vector((math.cos(a), math.sin(a), rng.uniform(-0.05, 0.15))).normalized()
             tpts, tr = grow_branch(rng, c, d, R * rng.uniform(0.6, 0.95), 0.035, 0.012, 3, 0.1, 0.0, 0.0)
             tm.tube(tpts, tr, seg=4)
-        n = int(R * R * 24)
+        n = int(R * R * 70)
         for j in range(n):
             u = rng.random() ** 0.5; a = rng.uniform(0, 2 * math.pi)
-            p = c + Vector((math.cos(a) * u * R, math.sin(a) * u * R, rng.uniform(-0.15, 0.45) * (1 - 0.5 * u) + 0.1))
-            tm.crossed_cards(p, rng.uniform(0.65, 0.95), rng, tilt=0.45, facing=Vector((0, 0, 1)), aspect=0.8)
+            p = c + Vector((math.cos(a) * u * R, math.sin(a) * u * R, rng.uniform(-0.2, 0.6) * (1 - 0.5 * u) + 0.1))
+            tm.crossed_cards(p, rng.uniform(0.45, 0.65), rng, tilt=0.5, facing=Vector((0, 0, 1)), aspect=0.8)
     return branches
 
 def build_conifer(tm, rng):
@@ -384,10 +385,10 @@ def build_conifer(tm, rng):
     trunk_pts, trunk_r = grow_branch(rng, (0, 0, 0), (0, 0, 1), H, 0.2, 0.01, 12, 0.004, 0.0, 0.0)
     tm.tube(trunk_pts, trunk_r, seg=10, v_scale=1.0)
     tm.tube([Vector((0, 0, -0.03)), Vector((0, 0, 0.2)), Vector((0, 0, 0.5))], [0.3, 0.23, 0.2], seg=10, cap=False)
-    z = 1.3; roll = 0.0
+    z = 1.1; roll = 0.0
     while z < H - 0.35:
         f = (z - 1.3) / (H - 1.3)
-        n = rng.randint(5, 7) if f < 0.7 else rng.randint(4, 6)
+        n = rng.randint(7, 9) if f < 0.7 else rng.randint(5, 7)
         Lb = 1.9 * (1 - f) ** 0.85 + 0.25
         for k in range(n):
             roll += 2 * math.pi / n + rng.uniform(-0.25, 0.25)
@@ -398,11 +399,11 @@ def build_conifer(tm, rng):
             pts, radii = grow_branch(rng, pp, d, length, min(pr * 0.45, 0.06), 0.008, 4, 0.03, -0.03, 0.08)  # droop then tips lift
             tm.tube(pts, radii, seg=5)
             # needle cards along the branch: flat, oriented along the branch; side sprays
-            ncard = max(2, int(length / 0.42))
+            ncard = max(2, int(length / 0.26))
             for i in range(ncard):
                 t = (i + 0.5) / ncard
                 qp, qd, qr = point_on(pts, radii, t)
-                w = 0.55 + 0.45 * (1 - f) * (1 - 0.4 * t); h = w * 1.1
+                w = 0.38 + 0.3 * (1 - f) * (1 - 0.4 * t); h = w * 1.25
                 rnd = (rng.random(), rng.random(), rng.random())
                 side = Vector((0, 0, 1)).cross(qd).normalized()
                 # main flat card lying along the branch (texture spray points along +up = qd)
@@ -414,7 +415,7 @@ def build_conifer(tm, rng):
                 tm.card(qp, Vector((0, 0, 1)) * 0.6 + side * 0.0, (up + drop).normalized(), w * 0.7, h, rnd, anchor=0.25) if False else None
                 q2 = Quaternion((up + drop).normalized(), math.pi / 2)
                 tm.card(qp, q2 @ right, (up + drop).normalized(), w * 0.75, h, rnd, anchor=0.25)
-        z += 0.38 + 0.25 * f
+        z += 0.3 + 0.2 * f
     # leader tip spray
     tip = trunk_pts[-1]
     for i in range(3):
@@ -423,7 +424,7 @@ def build_conifer(tm, rng):
         tm.card(tip - Vector((0, 0, 0.1)), right, Vector((0, 0, 1)), 0.45, 0.7, rnd, anchor=0.5)
     return []
 
-def build_palm(tm, rng, fronds=13, H=10.0):
+def build_palm(tm, rng, fronds=13, H=8.6):
     """Coconut palm: curved ringed trunk, arching fronds built from a rib and many leaflet quads, coconuts."""
     lean = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), 0)).normalized()
     pts = []; radii = []; n = 14
@@ -539,22 +540,26 @@ def build_species(name, col):
         if prm.get('fruit'):
             add_fruit(tm, rng, branches, prm['fruit'], hang=prm.get('fruit_hang', False)); fruit_mat = fruit_material()
         bark = bark_material(f'MAT_Bark_{name}', prm['bark_tex'], tint=prm.get('bark_tint', (1, 1, 1, 1)))
-        leaf = leaf_material(f'MAT_Leaf_{name}', prm['leaf_tex'], translucency=0.35)
+        leaf = leaf_material(f'MAT_Leaf_{name}', prm['leaf_tex'], tint=(0.62, 0.72, 0.5, 1), translucency=0.3)
     elif name == 'UMBRELLA':
         rng = random.Random(505); build_umbrella(tm, rng)
         bark = bark_material('MAT_Bark_UMBRELLA', 'bark_broad.png', tint=(0.62, 0.55, 0.48, 1), bump=0.6, scale=(2.0, 1.0))
-        leaf = leaf_material('MAT_Leaf_UMBRELLA', 'leaves_umbrella.png', translucency=0.3)
+        leaf = leaf_material('MAT_Leaf_UMBRELLA', 'leaves_umbrella.png', tint=(0.6, 0.7, 0.5, 1), translucency=0.3)
     elif name == 'CONIFER':
         rng = random.Random(606); build_conifer(tm, rng)
         bark = bark_material('MAT_Bark_CONIFER', 'bark_conifer.png', tint=(0.7, 0.62, 0.58, 1))
-        leaf = leaf_material('MAT_Needles', 'needles_conifer.png', tint=(0.85, 1.0, 0.9, 1), translucency=0.2, rough=0.6, hue_var=0.03)
+        leaf = leaf_material('MAT_Needles', 'needles_conifer.png', tint=(0.45, 0.6, 0.5, 1), translucency=0.15, rough=0.65, hue_var=0.03)
     elif name == 'PALM':
         rng = random.Random(707); build_palm(tm, rng)
         bark = bark_material('MAT_Bark_PALM', 'bark_palm.png', tint=(0.8, 0.76, 0.66, 1), bump=0.5, scale=(1.0, 1.0))
         leaf = palm_leaf_material(); fruit_mat = coconut_material()
     objs = tm.finish(f'TREE_{name}', col, root, bark, leaf, fruit_mat)
+    zmax = max(v.co.z for o in objs for v in o.data.vertices)
+    k = NOMINAL_H / zmax
     for o in objs:
+        for v in o.data.vertices: v.co *= k
         for p in o.data.polygons: p.use_smooth = True
+        o.data.update()
     return root, objs
 
 def build_all():
@@ -581,7 +586,7 @@ def build_all():
 # ----------------------------------------------------------------------------- previews
 def preview_lineup(out=os.path.join(PREVIEWS, 'asset_trees_lineup.png'), samples=48):
     sc = bpy.context.scene
-    ground = K.ground('GROUND', 400, P.new_mat('MAT_PreviewGround', (0.55, 0.55, 0.54, 1), 0.9), z=0)
+    ground = K.ground('GROUND', 4000, P.new_mat('MAT_PreviewGround', (0.55, 0.55, 0.54, 1), 0.9), z=0)
     spacing = 10.5; n = len(SPECIES)
     for i, name in enumerate(SPECIES):
         col = bpy.data.collections[f'TREE_{name}']
@@ -589,8 +594,8 @@ def preview_lineup(out=os.path.join(PREVIEWS, 'asset_trees_lineup.png'), samples
             if o.parent is None: o.location = ((i - (n - 1) / 2) * spacing, 0, 0)
     P.setup_world(sun_rot=(math.radians(52), 0, math.radians(-35)), sun_energy=3.5, sky=True, sky_strength=0.7, sun_elev=48, sun_az=215)
     P.setup_render((1280, 720), samples=samples, out=out)
-    sc.cycles.transparent_max_bounces = 24
-    P.add_camera('CAM_lineup', loc=(6, -62, 10), target=(0, 0, 5.6), lens=40)
+    sc.cycles.transparent_max_bounces = 16
+    P.add_camera('CAM_lineup', loc=(4, -80, 8.5), target=(0, 0, 5.4), lens=35)
     bpy.ops.render.render(write_still=True); print('rendered', out)
 
 def preview_closeup(out=os.path.join(PREVIEWS, 'asset_tree_mango_closeup.png'), samples=48):
@@ -602,14 +607,18 @@ def preview_closeup(out=os.path.join(PREVIEWS, 'asset_tree_mango_closeup.png'), 
     root = bpy.data.objects['TREE_MANGO_ROOT']
     P.setup_world(sun_rot=(math.radians(55), 0, math.radians(-60)), sun_energy=3.5, sky=True, sky_strength=0.7, sun_elev=45, sun_az=200)
     P.setup_render((1280, 720), samples=samples, out=out)
-    sc.cycles.transparent_max_bounces = 24
+    sc.cycles.transparent_max_bounces = 16
     x = root.location.x
-    P.add_camera('CAM_close', loc=(x + 7, -14, 3.0), target=(x, 0, 5.2), lens=45, dof_target=15.5, fstop=4)
+    P.add_camera('CAM_close', loc=(x + 9, -21, 2.2), target=(x, 0, 5.0), lens=40, dof_target=23, fstop=5.6)
     bpy.ops.render.render(write_still=True); print('rendered', out)
 
 if __name__ == '__main__':
     argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
     rep = build_all()
-    if '--preview' in argv:
-        preview_lineup(); preview_closeup()
+    smp = int(argv[argv.index('--samples') + 1]) if '--samples' in argv else 48
+    if '--lineup' in argv or '--preview' in argv: preview_lineup(samples=smp)
+    if '--closeup' in argv or '--preview' in argv:
+        if '--lineup' in argv or '--preview' in argv:
+            bpy.data.objects.remove(bpy.data.objects['CAM_lineup'])
+        preview_closeup(samples=smp)
     print('REPORT', rep)

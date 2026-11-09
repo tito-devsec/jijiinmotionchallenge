@@ -69,7 +69,7 @@ def cluster(name, n, wmin, wmax, aspect, base_cols, kind, seed, spread=0.42, ste
 def needles(name, seed):
     random.seed(seed)
     img = Image.new('RGBA', (S, S), (0, 0, 0, 0)); d = ImageDraw.Draw(img)
-    cols = [(38, 66, 44), (58, 92, 60), (86, 120, 84), (110, 142, 108)]
+    cols = [(26, 52, 34), (40, 72, 46), (58, 96, 62), (78, 112, 78)]
     cx0, cy0 = S / 2, S * 0.08
     # main twig downwards from top centre, with side twigs covered in needles (spruce spray)
     def spray(x0, y0, ang, L, width, depth):
@@ -80,7 +80,7 @@ def needles(name, seed):
             t = i / max(1, n - 1); px = x0 + (x1 - x0) * t; py = y0 + (y1 - y0) * t
             for side in (-1, 1):
                 na = ang + side * random.uniform(0.9, 1.5); nl = random.uniform(11, 20) * (1.0 - 0.3 * t)
-                c = random.choice(cols); c = lerp(c, (160, 180, 150), random.random() * 0.15)
+                c = random.choice(cols); c = lerp(c, (140, 160, 130), random.random() * 0.1)
                 d.line([(px, py), (px + math.cos(na) * nl, py + math.sin(na) * nl)], fill=c + (255,), width=2)
         if depth > 0:
             k = int(L / 20)
