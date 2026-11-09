@@ -29,10 +29,20 @@ def build(scn, quality):
     # a few entry bubbles following the phone
     if 'BUBBLE_EMITTER' in bpy.data.objects:
         be = bpy.data.objects['BUBBLE_EMITTER'].copy(); sc.collection.objects.link(be); be.parent = phone; be.location = (0, 0, 0)
-    cam = P.add_camera(loc=(rest[0] - 3.5, rest[1] - 5.0, -1.5), target=phone, lens=28, dof_target=phone, fstop=2.8)
-    S.cam_path(cam, [(1, (rest[0] - 3.5, rest[1] - 5.0, -1.2)), (int(F * 0.5), (rest[0] - 4.0, rest[1] - 6.0, (rest[2] - 1.5) * 0.55)), (F, (rest[0] - 2.6, rest[1] - 4.2, rest[2] + 1.0))])
-    cam.data.clip_end = 400
+    # chase camera baked from the phone's own curves: ~1.1 m away while it sinks, easing to a low 0.7 m view on the sand
+    cam = P.add_camera(loc=(0, 0, 0), target=phone, lens=35, dof_target=phone, fstop=3.2)
+    fcs = phone.animation_data.action.fcurves
+    ev = lambda f: [next(fc for fc in fcs if fc.data_path == 'location' and fc.array_index == i).evaluate(f) for i in range(3)]
+    for f in range(1, F + 1):
+        px, py, pz = ev(f); k = min(1.0, f / fs); k = k * k * (3 - 2 * k)
+        ang = math.radians(-120 + 50 * k); d = 1.15 - 0.45 * k; h = 0.35 - 0.1 * k
+        cam.location = (px + d * math.cos(ang), py + d * math.sin(ang), max(pz + h, rest[2] + 0.25)); cam.keyframe_insert('location', frame=f)
+    for fc in cam.animation_data.action.fcurves:
+        for kp in fc.keyframe_points: kp.interpolation = 'LINEAR'
+    cam.data.clip_start = 0.01; cam.data.clip_end = 400
+    # keep the screen glowing faintly as it sinks (the footage is still playing)
+    S.screen_sequence(seq_dir=os.path.join(P.ROOT, 'renders', 's09_ui'), strength=1.8)
     P.setup_render(samples=24, frame_end=F, volumes=True)
-    c = sc.cycles; c.volume_bounces = 1; c.volume_step_rate = 4.0; c.volume_max_steps = 48; c.transparent_max_bounces = 12
+    c = sc.cycles; c.volume_bounces = 1; c.volume_step_rate = 6.0; c.volume_max_steps = 32; c.transparent_max_bounces = 12
     sc.view_settings.exposure = -0.4
     S.frame_range(scn)

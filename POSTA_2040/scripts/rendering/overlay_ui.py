@@ -11,6 +11,10 @@ def font(sz, bold=True):
     import glob as g
     c = g.glob('/usr/share/fonts/**/*Inter*', recursive=True) or g.glob('/usr/share/fonts/**/DejaVuSans-Bold.ttf', recursive=True)
     return ImageFont.truetype(c[0], sz)
+def font_black(sz):
+    for p in ('/usr/share/fonts/opentype/inter/InterDisplay-Black.otf', '/usr/share/fonts/opentype/inter/Inter-Black.otf'):
+        if os.path.exists(p): return ImageFont.truetype(p, sz)
+    return font(sz)
 WHITE = (243, 240, 232); TURQ = (0, 198, 168); ORANGE = (255, 101, 13)
 files = sorted(glob.glob(os.path.join(src, 'f_*.png')))
 # fill frame-step gaps so the output is a contiguous 24 fps sequence (also usable as an image sequence on the phone screen)
@@ -56,5 +60,18 @@ for m, fp in seq:
         d.rounded_rectangle([bx0, by, bx1, by + 8], radius=4, fill=(60, 66, 80))
         if prog > 0: d.rounded_rectangle([bx0, by, bx0 + int((bx1 - bx0) * prog), by + 8], radius=4, fill=TURQ)
         d.text((bx1 - 120, by - 34), "Shared" if prog >= 1 else "Sharing…", font=font(22), fill=TURQ if prog >= 1 else (200, 200, 200))
+    elif mode == 'brand':
+        # final title: JIJI IN MOTION (MOTION on the campaign green block) + tagline, left third, rising fade-in
+        def ease(x): return 0.5 - 0.5 * math.cos(math.pi * max(0.0, min(1.0, x)))
+        GREEN = (178, 222, 60); INK = (12, 14, 18)
+        a1 = ease((t - 2.0) / 1.0); a2 = ease((t - 3.0) / 1.0)
+        lay = Image.new('RGBA', (W, H), (0, 0, 0, 0)); dl = ImageDraw.Draw(lay)
+        fbig = font_black(int(H * 0.11)); x0 = int(W * 0.07); y0 = int(H * 0.36) + int(24 * (1 - a1))
+        w1 = dl.textlength('JIJI IN ', font=fbig); w2 = dl.textlength('MOTION', font=fbig)
+        dl.text((x0, y0), 'JIJI IN ', font=fbig, fill=WHITE + (int(255 * a1),))
+        dl.rectangle([x0 + w1 - 8, y0 + int(H * 0.012), x0 + w1 + w2 + 8, y0 + int(H * 0.118)], fill=GREEN + (int(255 * a1),))
+        dl.text((x0 + w1, y0), 'MOTION', font=fbig, fill=INK + (int(255 * a1),))
+        dl.text((x0 + 4, y0 + int(H * 0.15) + int(16 * (1 - a2))), 'THE FUTURE IS WORTH CAPTURING.', font=font(int(H * 0.04)), fill=WHITE + (int(255 * a2),))
+        im.alpha_composite(lay)
     im.convert('RGB').save(os.path.join(dst, f'f_{m:04d}.png'))
 print('overlaid', len(seq), 'frames ->', dst)

@@ -318,3 +318,11 @@ def screen_sequence(mat_name='MAT_PhoneScreen', seq_dir=None, first=1, count=Non
     tex.image_user.use_auto_refresh = True; tex.image_user.use_cyclic = True
     b = next(n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'); nt.links.new(tex.outputs[0], b.inputs['Emission Color']); b.inputs['Emission Strength'].default_value = strength
     return True
+
+
+def binary_off_after(md, frame):
+    """Stop evaluating a binary modifier once its transformation is finished (saves most of the render cost)."""
+    md.show_render = True; md.keyframe_insert('show_render', frame=frame - 1)
+    md.show_render = False; md.keyframe_insert('show_render', frame=frame)
+    md.show_viewport = True; md.keyframe_insert('show_viewport', frame=frame - 1)
+    md.show_viewport = False; md.keyframe_insert('show_viewport', frame=frame)

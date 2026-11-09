@@ -25,7 +25,7 @@ def build(scn, quality):
     for m in hm:
         S.key_progress(m, [(1, 1.0), (int(F * 0.35), 1.0), (int(F * 0.85), 0.0), (F, 0.0)])
         P.key_mod(m, 'Density', 1, 400); P.key_mod(m, 'Density', int(F * 0.25), 3000)
-        S.drive_flow(m, speed=1.5)
+        S.drive_flow(m, speed=1.5); S.binary_off_after(m, int(F * 0.85) + 2)
     # background walkers at other stages
     for i, (nm, a, b, p0, p1, rev) in enumerate((('CIVILIAN_A', 4, 2.5, 1.0, 0.6, False), ('CIVILIAN_B', 10, -2.5, 0.6, 0.0, True), ('CIVILIAN_C', 16, 3.0, 1.0, 1.0, False), ('WORKER', 22, -3.0, 0.3, 0.0, True))):
         col, rig = S.add_character(nm, loc=g(a, b), heading=head + (math.pi if rev else 0))
