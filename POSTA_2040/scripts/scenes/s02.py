@@ -20,10 +20,10 @@ def build(scn, quality):
     top = P.nearest_building_top(sx, sy, 60); tx, ty, th = (top[0].x, top[0].y, top[1]) if top else (sx + 30, sy + 30, sz + 30)
     print('hero building', tx, ty, th)
     import math as _m
-    ang = _m.atan2(ty - sy, tx - sx); d0 = 45.0
-    c0 = (tx - _m.cos(ang) * d0, ty - _m.sin(ang) * d0, sz + 1.7); c1 = (tx - _m.cos(ang) * (d0 - 14), ty - _m.sin(ang) * (d0 - 14), sz + 5.0)
+    ang = _m.atan2(ty - sy, tx - sx); d0 = 70.0
+    c0 = (tx - _m.cos(ang) * d0, ty - _m.sin(ang) * d0, sz + 1.7); c1 = (tx - _m.cos(ang) * (d0 - 18), ty - _m.sin(ang) * (d0 - 18), sz + 4.0)
     P.clear_trees_near([c0, c1, (sx, sy)], 28)
-    cam = P.add_camera(loc=c0, target=(tx, ty, sz + 8), lens=24, dof_target=30, fstop=4)
-    S.cam_path(cam, [(1, c0), (F, c1)], [(1, (tx, ty, sz + 6)), (F, (tx, ty, th + 6))])
+    cam = P.add_camera(loc=c0, target=(tx, ty, sz + 8), lens=22, dof_target=45, fstop=5.6)
+    S.cam_path(cam, [(1, c0), (F, c1)], [(1, (tx, ty, sz + 10)), (F, (tx, ty, th * 0.75))])
     P.setup_render(samples=28, motion_blur=False, frame_end=F)
     S.frame_range(scn)

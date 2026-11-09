@@ -21,8 +21,8 @@ if quality == 'preview':
     sc.render.resolution_percentage = 50; sc.cycles.samples = min(sc.cycles.samples, 16)
 out = os.path.join(ROOT, 'renders', sid + ('_preview' if quality == 'preview' else '')); os.makedirs(out, exist_ok=True)
 frames = list(range(start, end + 1, step))
-if quality == 'still':  # one representative frame in the middle at full quality
-    frames = [int(args[3])] if len(args) > 3 else [(scn['frames'] // 2)]; out = os.path.join(ROOT, 'previews'); 
+if quality == 'still':  # one representative frame (arg 3 = frame) at full quality
+    frames = [int(args[2])] if len(args) > 2 else [(scn['frames'] // 2)]; out = os.path.join(ROOT, 'previews')
 for f in frames:
     fp = os.path.join(out, f'f_{f:04d}.png') if quality != 'still' else os.path.join(out, f'{sid}_still_{f:04d}.png')
     if os.path.exists(fp) and quality != 'still': continue

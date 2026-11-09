@@ -47,25 +47,32 @@ def new_mat(name, color=(0.8, 0.8, 0.8, 1), rough=0.5, metal=0.0, emission=None,
     return m
 
 def glyph_material(name='MAT_BinaryGlyph', c1='turq', c2='blue', strength=6.0):
-    """Emissive glyph material; colour picked per instance from attribute 'bit_rand'; pulse from 'flow'."""
+    """Emissive glyph material; colour picked per instance from Object Info > Random (works for GN instances in Cycles);
+    pulse = 0.5+0.5*sin(time*4 + random*2pi) with 'time' driven by the frame."""
     m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
     m.use_nodes = True; nt = m.node_tree
     for n in list(nt.nodes): nt.nodes.remove(n)
     out = nt.nodes.new('ShaderNodeOutputMaterial')
     em = nt.nodes.new('ShaderNodeEmission')
-    attr = nt.nodes.new('ShaderNodeAttribute'); attr.attribute_type = 'GEOMETRY'; attr.attribute_name = 'bit_rand'
+    oi = nt.nodes.new('ShaderNodeObjectInfo')
     ramp = nt.nodes.new('ShaderNodeValToRGB'); ramp.color_ramp.interpolation = 'CONSTANT'
-    ramp.color_ramp.elements[0].color = PAL[c1]; ramp.color_ramp.elements[1].position = 0.55; ramp.color_ramp.elements[1].color = PAL[c2]
-    e2 = ramp.color_ramp.elements.new(0.82); e2.color = PAL['white']
-    e3 = ramp.color_ramp.elements.new(0.95); e3.color = PAL['orange']
-    pulse = nt.nodes.new('ShaderNodeAttribute'); pulse.attribute_type = 'GEOMETRY'; pulse.attribute_name = 'pulse'
-    mul = nt.nodes.new('ShaderNodeMath'); mul.operation = 'MULTIPLY_ADD'; mul.inputs[1].default_value = strength; mul.inputs[2].default_value = strength * 0.35
-    nt.links.new(attr.outputs['Fac'], ramp.inputs[0]); nt.links.new(ramp.outputs[0], em.inputs[0])
-    nt.links.new(pulse.outputs['Fac'], mul.inputs[0]); nt.links.new(mul.outputs[0], em.inputs[1])
+    ramp.color_ramp.elements[0].color = PAL[c1]; ramp.color_ramp.elements[1].position = 0.5; ramp.color_ramp.elements[1].color = PAL[c2]
+    e2 = ramp.color_ramp.elements.new(0.8); e2.color = PAL['white']
+    e3 = ramp.color_ramp.elements.new(0.94); e3.color = PAL['orange']
+    nt.links.new(oi.outputs['Random'], ramp.inputs[0]); nt.links.new(ramp.outputs[0], em.inputs[0])
+    tval = nt.nodes.new('ShaderNodeValue'); tval.name = 'time'; tval.label = 'time'
+    fc = tval.outputs[0].driver_add('default_value'); fc.driver.expression = 'frame/24.0'
+    ph = nt.nodes.new('ShaderNodeMath'); ph.operation = 'MULTIPLY_ADD'; ph.inputs[1].default_value = 6.283
+    nt.links.new(oi.outputs['Random'], ph.inputs[0])
+    t4 = nt.nodes.new('ShaderNodeMath'); t4.operation = 'MULTIPLY'; t4.inputs[1].default_value = 4.0; nt.links.new(tval.outputs[0], t4.inputs[0])
+    nt.links.new(t4.outputs[0], ph.inputs[2])
+    sn = nt.nodes.new('ShaderNodeMath'); sn.operation = 'SINE'; nt.links.new(ph.outputs[0], sn.inputs[0])
+    pulse = nt.nodes.new('ShaderNodeMath'); pulse.operation = 'MULTIPLY_ADD'; pulse.inputs[1].default_value = strength * 0.4; pulse.inputs[2].default_value = strength * 0.8
+    nt.links.new(sn.outputs[0], pulse.inputs[0]); nt.links.new(pulse.outputs[0], em.inputs[1])
     nt.links.new(em.outputs[0], out.inputs[0])
     return m
 
-def dissolving_material(name, base_color, rough=0.6, metal=0.0, glow='turq', glow_strength=8.0):
+def dissolving_material(name, base_color, rough=0.6, metal=0.0, glow='turq', glow_strength=2.5):
     """Surface material whose faces glow at the dissolve front: reads face attribute 'front' (0..1)."""
     m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
     m.use_nodes = True; nt = m.node_tree
