@@ -5,13 +5,11 @@ import posta_lib as P, scene_lib as S
 
 def build(scn, quality):
     S.fresh(); F = scn['frames']
-    objs = S.load_city('binary', crop=((-140, 190), 520))
+    objs = S.load_city('binary', crop=((-140, 190), 520), real_trees=True)
     S.ocean_material_upgrade(dusk=True)
     b = objs['CITY_BUILDING']
     md = P.apply_binary(b, progress=0.0, density=0.7, size=0.85, noise_scale=0.025, seed=3, height_bias=0.55, band=0.1)
     S.key_progress(md, [(1, 0.0), (int(F * 0.12), 0.02), (int(F * 0.85), 1.0), (F, 1.0)]); S.drive_flow(md, speed=1.0)
-    t = objs['CITY_TREE']; mt = P.apply_binary(t, progress=0.0, density=0.4, size=0.5, noise_scale=0.05, seed=9, height_bias=0.3, band=0.15)
-    S.key_progress(mt, [(1, 0.0), (int(F * 0.25), 0.0), (int(F * 0.9), 1.0)]); S.drive_flow(mt, speed=1.0)
     # roads start real here; small shimmer only at the end
     r = objs['CITY_ROAD']; mr = P.apply_binary(r, progress=0.0, density=0.5, size=0.6, noise_scale=0.012, seed=11, height_bias=0.0, band=0.2)
     S.key_progress(mr, [(int(F * 0.8), 0.0), (F, 0.08)]); S.drive_flow(mr, speed=1.5)
@@ -23,6 +21,7 @@ def build(scn, quality):
     ang = _m.atan2(ty - sy, tx - sx); d0 = 70.0
     c0 = (tx - _m.cos(ang) * d0, ty - _m.sin(ang) * d0, sz + 1.7); c1 = (tx - _m.cos(ang) * (d0 - 18), ty - _m.sin(ang) * (d0 - 18), sz + 4.0)
     P.clear_trees_near([c0, c1, (sx, sy), (tx, ty)], 160)
+    import tree_lib; tree_lib.clear_real_trees_near([c0, c1, (tx, ty)], 45)
     cam = P.add_camera(loc=c0, target=(tx, ty, sz + 8), lens=22, dof_target=45, fstop=5.6)
     S.cam_path(cam, [(1, c0), (F, c1)], [(1, (tx, ty, sz + 10)), (F, (tx, ty, th * 0.75))])
     P.setup_render(samples=28, motion_blur=False, frame_end=F)

@@ -5,7 +5,7 @@ import posta_lib as P, scene_lib as S
 
 def build(scn, quality):
     S.fresh(); F = scn['frames']
-    objs = S.load_city('binary', crop=((-100, 150), 700)); S.ocean_material_upgrade(dusk=True)
+    objs = S.load_city('binary', crop=((-100, 150), 700), real_trees=True); S.ocean_material_upgrade(dusk=True)
     b = objs['CITY_BUILDING']; mb = P.apply_binary(b, progress=1.0, density=0.35, size=0.9, noise_scale=0.025, seed=3, height_bias=0.55); S.drive_flow(mb, speed=1.0)
     r = objs['CITY_ROAD']; mr = P.apply_binary(r, progress=0.0, density=0.9, size=0.55, noise_scale=0.006, seed=11, height_bias=0.0, band=0.25)
     S.key_progress(mr, [(1, 0.0), (int(F * 0.1), 0.0), (int(F * 0.8), 1.0), (F, 1.0)]); S.drive_flow(mr, speed=2.0)

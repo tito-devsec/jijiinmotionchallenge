@@ -22,7 +22,7 @@ def add_vehicles(F):
 
 def build(scn, quality):
     S.fresh(); F = scn['frames']
-    objs = S.load_city('binary', crop=((50, 60), 900), future=True); S.ocean_material_upgrade(dusk=False)
+    objs = S.load_city('binary', crop=((50, 60), 900), future=True, real_trees=True); S.ocean_material_upgrade(dusk=False)
     S.apply_future_materials(objs); S.terrain_urban_material()
     S.add_ferry(start=(120, -40), end=(520, -420), F=F)
     # the dissolving materials are replaced by future ones; binary modifier runs backwards so glyphs resolve into glass and steel

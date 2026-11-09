@@ -6,7 +6,7 @@ import posta_lib as P, scene_lib as S
 
 def build(scn, quality):
     S.fresh(); F = scn['frames']
-    objs = S.load_city('future', future=True); S.ocean_material_upgrade(dusk=False); S.apply_future_materials(objs); S.terrain_urban_material()
+    objs = S.load_city('future', future=True, real_trees=True); S.ocean_material_upgrade(dusk=False); S.apply_future_materials(objs); S.terrain_urban_material()
     S.world_golden(strength=0.05, sun_elev=18, sun_az=262, sun_energy=2.6)
     S.enable_mist(start=300, depth=2600, color=(0.85, 0.76, 0.64, 1), strength=0.3)
     # continuity with scene 07/08: aerial, looking down on Kivukoni from the south-east over the harbour, slow drift

@@ -42,7 +42,7 @@ def choose_species(rng, t, ground):
     sp = t.get('species', 'broadleaf')
     if is_coastal(t['x'], t['y'], ground) and rng.random() < 0.4:
         return 'PALM'
-    if sp == 'conifer': return 'CONIFER'
+    if sp == 'conifer': return pick(rng, [('CONIFER', 0.15), ('MANGO', 0.3), ('BROADLEAF_A', 0.2), ('UMBRELLA', 0.15), ('PALM', 0.2)])  # OSM mis-tags most Dar trees as conifer
     if sp == 'palm': return 'PALM'
     if sp == 'poplar': return pick(rng, POPLAR_MIX)
     if sp == 'bush': return pick(rng, BUSH_MIX)

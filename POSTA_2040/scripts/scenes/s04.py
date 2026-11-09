@@ -11,6 +11,7 @@ def build(scn, quality):
     for extra in ('CITY_CROWNS', 'CITY_SPIRES'):
         if extra in objs:
             mx = P.apply_binary(objs[extra], progress=1.0, density=0.08, size=2.4, noise_scale=0.02, seed=4, height_bias=0.5); S.drive_flow(mx, speed=0.8)
+    tr = objs['CITY_TREE']; mt = P.apply_binary(tr, progress=1.0, density=0.03, size=1.5, noise_scale=0.05, seed=9, height_bias=0.3); S.drive_flow(mt, speed=1.0)
     pv = objs['CITY_PAVING']; mp = P.apply_binary(pv, progress=0.6, density=0.02, size=1.6, noise_scale=0.01, seed=5, height_bias=0.0); S.drive_flow(mp, speed=2.0)
     S.world_dusk(strength=0.07, sun_elev=5, sun_energy=0.8)
     S.enable_mist(start=300, depth=2500, color=(0.2, 0.3, 0.5, 1), strength=0.6)

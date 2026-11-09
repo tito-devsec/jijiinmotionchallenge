@@ -23,7 +23,7 @@ def crop_city(objs, center, radius, keep=('CITY_WATER', 'CITY_TERRAIN', 'OCEAN_F
         bmesh.ops.delete(bm, geom=[bm.verts[i] for i in np.nonzero(far)[0]], context='VERTS')
         bm.to_mesh(me); bm.free(); me.update()
 
-def load_city(style='real', crop=None, future=False):
+def load_city(style='real', crop=None, future=False, real_trees=False):
     """future=True loads the 2040 skyscraper version (same footprints and roads) from city_future.blend."""
     blend = os.path.join(P.ROOT, 'blender', 'city_future.blend' if future else 'city_base.blend')
     names = ('CITY_BUILDING', 'CITY_ROAD', 'CITY_WATER', 'CITY_TERRAIN', 'CITY_TREE', 'CITY_PAVING', 'CITY_FURNITURE', 'CITY_RAIL') + (('CITY_CROWNS', 'CITY_SPIRES') if future else ())
@@ -35,6 +35,13 @@ def load_city(style='real', crop=None, future=False):
         if o: bpy.data.collections['CITY'].objects.link(o); objs['OCEAN_FAR'] = o
     if crop: crop_city(objs, *crop)
     P.city_materials(objs, style)
+    if real_trees:
+        import tree_lib
+        tree_lib.load_real_trees(hide_lowpoly=True); tree_lib.set_tree_lod()
+        if crop:
+            (cx, cy), rad = crop[0], crop[1]
+            for e in list(tree_lib.tree_instances()):
+                if math.hypot(e.location.x - cx, e.location.y - cy) > rad: bpy.data.objects.remove(e)
     if 'OCEAN_FAR' in objs: objs['OCEAN_FAR'].data.materials.append(bpy.data.materials['MAT_Ocean'])
     return objs
 
