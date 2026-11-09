@@ -187,6 +187,34 @@ def cloth_material(name, color, rough=0.85, sheen=0.6):
     nt.links.new(tex.outputs['Fac'], bump.inputs['Height']); nt.links.new(bump.outputs['Normal'], b.inputs['Normal'])
     return m
 
+def afro_material():
+    m = P.new_mat('MAT_afro', (0.01, 0.007, 0.005, 1), 0.9)
+    nt = m.node_tree; b = nt.nodes['Principled BSDF']
+    tex = nt.nodes.new('ShaderNodeTexNoise'); tex.inputs['Scale'].default_value = 400.0; tex.inputs['Detail'].default_value = 6.0; tex.inputs['Roughness'].default_value = 0.8
+    bump = nt.nodes.new('ShaderNodeBump'); bump.inputs['Strength'].default_value = 0.9; bump.inputs['Distance'].default_value = 0.004
+    nt.links.new(tex.outputs['Fac'], bump.inputs['Height']); nt.links.new(bump.outputs['Normal'], b.inputs['Normal'])
+    return m
+
+def pattern_material(name='MAT_hero_pattern'):
+    """Bold black & white abstract leaf print (procedural)."""
+    m = P.new_mat(name, (1, 1, 1, 1), 0.8)
+    nt = m.node_tree; b = nt.nodes['Principled BSDF']
+    b.inputs['Sheen Weight'].default_value = 0.4
+    tc = nt.nodes.new('ShaderNodeTexCoord'); mp = nt.nodes.new('ShaderNodeMapping'); mp.inputs['Scale'].default_value = (1, 1, 1.6)
+    nt.links.new(tc.outputs['Object'], mp.inputs['Vector'])
+    n1 = nt.nodes.new('ShaderNodeTexNoise'); n1.inputs['Scale'].default_value = 14.0; n1.inputs['Detail'].default_value = 2.5; n1.inputs['Roughness'].default_value = 0.45; n1.inputs['Distortion'].default_value = 1.8
+    nt.links.new(mp.outputs[0], n1.inputs['Vector'])
+    vor = nt.nodes.new('ShaderNodeTexVoronoi'); vor.feature = 'DISTANCE_TO_EDGE'; vor.inputs['Scale'].default_value = 9.0
+    nt.links.new(n1.outputs['Color'], vor.inputs['Vector'])
+    r1 = nt.nodes.new('ShaderNodeValToRGB'); r1.color_ramp.interpolation = 'CONSTANT'
+    r1.color_ramp.elements[0].position = 0.0; r1.color_ramp.elements[0].color = (0.9, 0.9, 0.88, 1)
+    r1.color_ramp.elements[1].position = 0.06; r1.color_ramp.elements[1].color = (0.01, 0.01, 0.01, 1)
+    e = r1.color_ramp.elements.new(0.16); e.color = (0.9, 0.9, 0.88, 1)
+    e2 = r1.color_ramp.elements.new(0.28); e2.color = (0.01, 0.01, 0.01, 1)
+    nt.links.new(vor.outputs['Distance'], r1.inputs['Fac'])
+    nt.links.new(r1.outputs['Color'], b.inputs['Base Color'])
+    return m
+
 def tint(col, f):
     return (col[0] * f, col[1] * f, col[2] * f, 1.0)
 
@@ -308,7 +336,7 @@ def body_shape(B, offset=0.0, parts=('torso', 'arms', 'legs', 'head', 'hands', '
             S.ellipsoid((0, 0.08 * s, z['mouth'] - 0.011 * s), (0.027 * s, 0.013 * s, 0.01 * s))  # lower lip
             S.ellipsoid((0, 0.081 * s, z['mouth'] + 0.008 * s), (0.025 * s, 0.011 * s, 0.007 * s))  # upper lip
             for sd in (-1, 1):
-                S.ellipsoid((sd * 0.083 * s, -0.012 * s, z['eye'] - 0.02 * s), (0.012 * s, 0.018 * s, 0.03 * s))  # ear
+                S.ellipsoid((sd * 0.08 * s, -0.012 * s, z['eye'] - 0.018 * s), (0.016 * s, 0.022 * s, 0.03 * s))  # ear
                 S.ellipsoid((sd * 0.034 * s, 0.09 * s, z['eye'] + 0.02 * s), (0.03 * s, 0.014 * s, 0.009 * s))  # brow ridge
     if 'arms' in parts:
         for sd in (-1, 1):
@@ -391,17 +419,25 @@ def head_accessories(B, col, prefix, mats, hair='short', female=False):
     hd = [(z['eye'] + 0.012 * s, 0.079, 0.1, -0.024), (z['eye'] + 0.035 * s, 0.08, 0.1, -0.02),
           (z['eye'] + 0.06 * s, 0.079, 0.099, -0.014), (z['top'] - 0.035 * s, 0.07, 0.09, -0.01),
           (z['top'] - 0.008 * s, 0.046, 0.062, -0.013), (z['top'] + 0.01 * s, 0.014, 0.018, -0.016)]
-    S = Shape(); S.loft([((0, cy * s, zz), rx * s * 1.1 + 0.008, ry * s * 1.08 + 0.008) for (zz, rx, ry, cy) in hd], segs=32)
+    hf, ha = (1.3, 0.03) if hair == 'afro' else (1.1, 0.008)
+    if hair == 'afro':
+        hd = [(z['eye'] - 0.005 * s, 0.079, 0.1, -0.03)] + hd
+    S = Shape(); S.loft([((0, cy * s, zz), rx * s * hf + ha, ry * s * (hf - 0.02) + ha) for (zz, rx, ry, cy) in hd], segs=32)
     S.ellipsoid((0, -0.05 * s, z['eye'] - 0.005 * s), (0.086 * s, 0.07 * s, 0.05 * s))  # occiput / nape coverage
     if hair == 'bun':
         S.ellipsoid((0, -0.085 * s, z['top'] - 0.02 * s), (0.04 * s, 0.035 * s, 0.035 * s))
     if hair == 'long':
         S.loft([((0, -0.07 * s, z['eye'] + 0.02 * s), 0.07 * s, 0.045 * s), ((0, -0.075 * s, z['chin']), 0.075 * s, 0.04 * s),
                 ((0, -0.08 * s, z['neck_base'] - 0.02 * s), 0.07 * s, 0.035 * s)], segs=20)
+    if hair == 'afro':
+        S.ellipsoid((0, -0.06 * s, z['eye'] - 0.0 * s), (0.11 * s, 0.09 * s, 0.07 * s))
     hr = S.to_object(f'{prefix}_hair', col)
     rm = hr.modifiers.new('Remesh', 'REMESH'); rm.mode = 'VOXEL'; rm.voxel_size = 0.008; apply_modifiers(hr)
+    if hair == 'afro':
+        dp = hr.modifiers.new('Afro', 'DISPLACE'); tx = bpy.data.textures.new(f'{prefix}_afro_tex', 'CLOUDS'); tx.noise_scale = 0.02; tx.noise_depth = 2
+        dp.texture = tx; dp.strength = 0.012; dp.mid_level = 0.5; apply_modifiers(hr)
     ls = hr.modifiers.new('S', 'LAPLACIANSMOOTH'); ls.iterations = 2; ls.lambda_factor = 0.5; ls.use_volume_preserve = True; apply_modifiers(hr)
-    shade_smooth(hr); hr.data.materials.append(mats['hair'])
+    shade_smooth(hr); hr.data.materials.append(mats['afro'] if hair == 'afro' else mats['hair'])
     out.append((hr, 'head'))
     return out
 
@@ -537,7 +573,7 @@ def shirt(B, col, prefix, mat, sleeves='short', hem=None, off=0.016, neck=True):
     ob.data.materials.append(mat)
     return ob
 
-def trousers(B, col, prefix, mat, length=1.0, off=0.012, waist=None):
+def trousers(B, col, prefix, mat, length=1.0, off=0.012, waist=None, cargo=False):
     s, z = B.s, B.z
     S = Shape()
     hw = B.hw
@@ -553,6 +589,10 @@ def trousers(B, col, prefix, mat, length=1.0, off=0.012, waist=None):
             pts += [kn + (an - kn) * t for t in (0.3, 0.65, L)]
             rr += [0.062, 0.058, 0.052]; rr2 += [0.066, 0.06, 0.054]
         S.loft([(tuple(pts[i]), rr[i] * s + off, rr2[i] * s + off) for i in range(len(pts))], segs=24)
+        if cargo:
+            pc = kn + (hp - kn) * 0.42
+            S.ellipsoid((pc.x + sd * (0.072 * B.bulk * s + off), -0.005 * s, pc.z), (0.022 * s, 0.065 * s, 0.085 * s))
+            S.ellipsoid((pc.x + sd * (0.078 * B.bulk * s + off), -0.005 * s, pc.z + 0.07 * s), (0.014 * s, 0.07 * s, 0.015 * s))  # flap
     ob = S.to_object(f'{prefix}_trousers', col)
     remesh_smooth(ob, voxel=0.011, smooth_iter=2, lam=0.5)
     ob.data.materials.append(mat)
@@ -589,7 +629,7 @@ def build_character(name, height=1.75, female=False, bulk=1.0, skin=(0.18, 0.09,
     B = Body(height=height, female=female, bulk=bulk)
     root = bpy.data.objects.new(f'{name}_root', None); root.empty_display_type = 'ARROWS'; root.empty_display_size = 0.3; col.objects.link(root)
     mats = {'skin': skin_material(f'MAT_{name}_skin', skin), 'eye': P.new_mat('MAT_eye_white', (0.8, 0.78, 0.74, 1), 0.25, coat=1.0),
-            'iris': P.new_mat('MAT_iris', (0.045, 0.02, 0.01, 1), 0.2, coat=1.0), 'hair': P.new_mat('MAT_hair', (0.012, 0.008, 0.006, 1), 0.8)}
+            'iris': P.new_mat('MAT_iris', (0.045, 0.02, 0.01, 1), 0.2, coat=1.0), 'hair': P.new_mat('MAT_hair', (0.012, 0.008, 0.006, 1), 0.8), 'afro': afro_material()}
     # --- body
     body = body_shape(B).to_object(f'{name}_body', col)
     remesh_smooth(body, voxel=0.01 if not QUICK else 0.02, smooth_iter=3, lam=0.6)
@@ -603,7 +643,7 @@ def build_character(name, height=1.75, female=False, bulk=1.0, skin=(0.18, 0.09,
     if outfit.get('shirt'):
         cl.append(shirt(B, col, name, outfit['shirt'], sleeves=outfit.get('sleeves', 'short'), hem=outfit.get('hem'), neck=outfit.get('neck', True)))
     if outfit.get('trousers'):
-        cl.append(trousers(B, col, name, outfit['trousers'], length=outfit.get('length', 1.0), waist=outfit.get('waist')))
+        cl.append(trousers(B, col, name, outfit['trousers'], length=outfit.get('length', 1.0), waist=outfit.get('waist'), off=outfit.get('trousers_off', 0.012), cargo=outfit.get('cargo', False)))
     if outfit.get('shoes'):
         cl.append(shoes(B, col, name, outfit['shoes'], boot=outfit.get('boot', False)))
     # --- armature
@@ -722,6 +762,63 @@ def diver_extras(C):
     bind_soft(hose, arm, ['head', 'neck', 'chest'])
     C['acc'] += [frame, glass_ob, strap, reg, tank, plate, bcd, hose, torch, lt] + fins
 
+def hero_extras(C):
+    """Poster styling: sunglasses, open patterned short-sleeve shirt over the white vest, sneaker accents, chain."""
+    B, col, arm, name = C['B'], C['col'], C['arm'], C['name']; s, z = B.s, B.z
+    for ob in C['cloth']:
+        if ob.name.endswith('_shirt'): ob.name = f'{name}_vest'
+    # sunglasses
+    lens_m = P.new_mat('MAT_sunglass_lens', (0.01, 0.01, 0.012, 1), 0.05, coat=1.0)
+    frame_m = P.new_mat('MAT_sunglass_frame', (0.02, 0.02, 0.02, 1), 0.3, metal=0.8)
+    S = Shape()
+    for sd in (-1, 1):
+        S.ellipsoid((sd * 0.034 * s, 0.1 * s, z['eye'] + 0.001 * s), (0.023 * s, 0.004 * s, 0.015 * s), segs=20, rings=10)
+    lenses = S.to_object(f'{name}_sunglass_lenses', col); shade_smooth(lenses); lenses.data.materials.append(lens_m)
+    S = Shape()
+    S.capsule((-0.012 * s, 0.1 * s, z['eye'] + 0.006 * s), (0.012 * s, 0.1 * s, z['eye'] + 0.006 * s), 0.0022 * s, segs=8)
+    for sd in (-1, 1):
+        S.capsule((sd * 0.056 * s, 0.092 * s, z['eye'] + 0.006 * s), (sd * 0.083 * s, 0.03 * s, z['eye'] + 0.008 * s), 0.0022 * s, segs=8)
+        S.capsule((sd * 0.083 * s, 0.03 * s, z['eye'] + 0.008 * s), (sd * 0.086 * s, -0.012 * s, z['eye'] + 0.0 * s), 0.0022 * s, segs=8)
+        # thin rim around each lens
+        rim = [((sd * (0.034 + 0.0235 * math.cos(a)) * s, 0.1 * s - 0.001 * s * math.cos(a) ** 2, z['eye'] + (0.001 + 0.0155 * math.sin(a)) * s), 0.0018 * s, 0.0018 * s) for a in [2 * math.pi * k / 24 for k in range(25)]]
+        S.loft(rim, segs=6, vhint=(0, 1, 0))
+    frame = S.to_object(f'{name}_sunglass_frame', col); shade_smooth(frame); frame.data.materials.append(frame_m)
+    # open shirt: inflated shell with short sleeves, front cut away in a V, solidified
+    sh = shirt(B, col, name + '_open', pattern_material(), sleeves='short', hem=z['hip'] - 0.04 * s, off=0.034, neck=True)
+    sh.name = f'{name}_shirt'
+    bm = bmesh.new(); bm.from_mesh(sh.data)
+    hem, top = z['hip'] - 0.04 * s, z['neck_base'] + 0.012 * s
+    kill = []
+    for f in bm.faces:
+        c = f.calc_center_median()
+        if c.y > 0.0 and c.z > hem - 0.01:
+            t = max(0.0, min(1.0, (c.z - hem) / (top - hem)))
+            w = (0.03 + 0.055 * t ** 1.3) * s
+            if abs(c.x) < w: kill.append(f)
+    bmesh.ops.delete(bm, geom=kill, context='FACES')
+    bm.to_mesh(sh.data); bm.free()
+    sol = sh.modifiers.new('Sol', 'SOLIDIFY'); sol.thickness = 0.005; sol.offset = 0.0; apply_modifiers(sh); shade_smooth(sh); recalc_normals(sh)
+    auto_weights(arm, [sh]); C['cloth'].append(sh)
+    # sneaker accents: sole + heel tab in orange
+    accent = P.new_mat('MAT_sneaker_accent', P.PAL['orange'], 0.4)
+    for ob in C['cloth']:
+        if ob.name.endswith('_shoes'):
+            ob.data.materials.append(accent)
+            for pg in ob.data.polygons:
+                if pg.center.z < 0.024 * s or (pg.center.y < B.ankle.y - 0.045 * s and pg.center.z > 0.05 * s): pg.material_index = 1
+    # chain necklace
+    gold = P.new_mat('MAT_chain', (1.0, 0.75, 0.3, 1), 0.25, metal=1.0)
+    cz = z['neck_base'] - 0.005 * s
+    path = []
+    for k in range(49):
+        a = 2 * math.pi * k / 48
+        path.append(((0.08 * s * math.cos(a), 0.012 * s + 0.078 * s * math.sin(a), cz - 0.055 * s * (0.5 + 0.5 * math.sin(a)) ** 1.5), 0.003 * s, 0.003 * s))
+    S = Shape(); S.loft(path, segs=8, vhint=(0, 0, 1))
+    chain = S.to_object(f'{name}_chain', col); shade_smooth(chain); chain.data.materials.append(gold)
+    bind_soft(chain, arm, ['chest', 'neck'])
+    for ob in (lenses, frame): bind_to_bone(ob, arm, 'head')
+    C['acc'] += [lenses, frame, chain]
+
 def passenger_seat(C):
     B, col, name = C['B'], C['col'], C['name']; s = B.s
     S = Shape()
@@ -739,10 +836,15 @@ def build_all():
     reset_scene()
     turq, white, orange, blue, yellow = P.PAL['turq'], P.PAL['white'], P.PAL['orange'], P.PAL['blue'], P.PAL['yellow']
     chars = {}
-    chars['HERO'] = build_character('HERO', height=1.72, female=True, bulk=0.97, skin=(0.18, 0.09, 0.05, 1), hair='bun',
-                                    outfit=dict(shirt=cloth_material('MAT_hero_top', turq, 0.7, 0.5), sleeves='cap', hem=None,
-                                                trousers=cloth_material('MAT_hero_trousers', tint(white, 0.75), 0.8), length=1.0,
-                                                shoes=P.new_mat('MAT_hero_shoes', tint(white, 0.9), 0.35, coat=0.3)))
+    chars['HERO'] = build_character('HERO', height=1.78, female=False, bulk=0.94, skin=(0.1, 0.05, 0.03, 1), hair='afro',
+                                    outfit=dict(shirt=cloth_material('MAT_hero_vest', tint(white, 1.0), 0.8), sleeves=None, neck=False, hem=None,
+                                                trousers=cloth_material('MAT_hero_cargo', (0.17, 0.21, 0.27, 1), 0.9), length=1.0, trousers_off=0.024, cargo=True,
+                                                shoes=P.new_mat('MAT_hero_sneakers', tint(white, 1.0), 0.4, coat=0.4)))
+    hero_extras(chars['HERO'])
+    chars['CIVILIAN_C'] = build_character('CIVILIAN_C', height=1.72, female=True, bulk=0.97, skin=(0.18, 0.09, 0.05, 1), hair='bun',
+                                    outfit=dict(shirt=cloth_material('MAT_civC_top', turq, 0.7, 0.5), sleeves='cap', hem=None,
+                                                trousers=cloth_material('MAT_civC_trousers', tint(white, 0.75), 0.8), length=1.0,
+                                                shoes=P.new_mat('MAT_civC_shoes', tint(white, 0.9), 0.35, coat=0.3)))
     chars['CIVILIAN_A'] = build_character('CIVILIAN_A', height=1.80, female=False, bulk=1.06, skin=(0.12, 0.06, 0.035, 1), hair='short',
                                           outfit=dict(shirt=cloth_material('MAT_civA_shirt', orange, 0.85), sleeves='short',
                                                       trousers=cloth_material('MAT_civA_trousers', (0.05, 0.05, 0.06, 1), 0.85), length=1.0,
@@ -822,13 +924,13 @@ def render(path, frame=1):
 
 def previews(chars):
     os.makedirs(PREV, exist_ok=True)
-    order = ['HERO', 'CIVILIAN_A', 'CIVILIAN_B', 'WORKER', 'PASSENGER', 'DIVER']
-    xs = [3.25, 1.95, 0.65, -0.65, -1.95, -3.25]
+    order = ['HERO', 'CIVILIAN_A', 'CIVILIAN_B', 'CIVILIAN_C', 'WORKER', 'PASSENGER', 'DIVER']
+    xs = [3.6, 2.4, 1.2, 0.0, -1.2, -2.4, -3.6]
     for n, x in zip(order, xs):
         chars[n]['root'].location = (x, 0, 0)
     studio()
     P.setup_render(res=(1280, 720), samples=12 if LOWS else 48, frame_start=1, frame_end=48)
-    cam = P.add_camera('CAM_LINEUP', loc=(0, 8.5, 1.35), target=(0, 0, 0.92), lens=42)
+    cam = P.add_camera('CAM_LINEUP', loc=(0, 9.6, 1.35), target=(0, 0, 0.92), lens=42)
     render(os.path.join(PREV, 'asset_characters_lineup.png'), 1)
     # hero walk
     hero = chars['HERO']
@@ -845,6 +947,9 @@ def previews(chars):
         chars['DIVER']['root'].location = (0, 0, 0); hero['root'].location = (50, -50, 0)
         cam4 = P.add_camera('CAM_DIVER', loc=(1.6, 2.6, 1.4), target=(0, 0, 1.0), lens=50); bpy.context.scene.camera = cam4
         render(os.path.join(PREV, 'asset_diver_check.png'), 1)
+        chars['DIVER']['root'].location = (50, -50, 0); chars['CIVILIAN_A']['root'].location = (0, 0, 0)
+        cam5 = P.add_camera('CAM_HIP', loc=(1.2, 1.4, 1.0), target=(0, 0, 0.9), lens=60); bpy.context.scene.camera = cam5
+        render(os.path.join(PREV, 'asset_hip_check.png'), 1)
 
 if __name__ == '__main__':
     t0 = time.time()
