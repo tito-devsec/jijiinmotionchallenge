@@ -15,12 +15,17 @@ clips = []
 # title cards (pre-rendered at 24 fps by brand_cards.py) bracket the film
 cards = [{'id': 'card_open', 'title': 'Opening card', 'frames': 72}] + cfg['scenes'] + [{'id': 'card_close', 'title': 'Closing card', 'frames': 120}]
 for s in cards:
-    d = os.path.join(R, s['id']); frames = sorted(glob.glob(os.path.join(d, 'f_*.png')))
-    this_step = 1 if s['id'].startswith('card') else step
+    d = os.path.join(R, s['id'])
+    for alt in ('_ui',):  # composited versions (camera / social UI) take precedence
+        if glob.glob(os.path.join(R, s['id'] + alt, 'f_*.png')): d = os.path.join(R, s['id'] + alt)
+    frames = sorted(glob.glob(os.path.join(d, 'f_*.png')))
+    nums = [int(os.path.basename(p)[2:6]) for p in frames]
+    gaps = [b - a for a, b in zip(nums, nums[1:])] + [max(1, s['frames'] - nums[-1] + 1)] if frames else []
+    this_step = max(gaps) if gaps else 1
     if not frames: print('MISSING', s['id']); continue
     lst = os.path.join(TMP, f"{s['id']}.txt")
     with open(lst, 'w') as f:
-        for p in frames: f.write(f"file '{p}'\nduration {this_step / FPS}\n")
+        for p, gp in zip(frames, gaps): f.write(f"file '{p}'\nduration {gp / FPS}\n")
         f.write(f"file '{frames[-1]}'\n")
     out = os.path.join(TMP, f"{s['id']}.mp4")
     vf = f"scale={W}:{H}:flags=lanczos,format=yuv420p"

@@ -13,9 +13,15 @@ def font(sz, bold=True):
     return ImageFont.truetype(c[0], sz)
 WHITE = (243, 240, 232); TURQ = (0, 198, 168); ORANGE = (255, 101, 13)
 files = sorted(glob.glob(os.path.join(src, 'f_*.png')))
-for i, fp in enumerate(files):
+# fill frame-step gaps so the output is a contiguous 24 fps sequence (also usable as an image sequence on the phone screen)
+nums = [int(os.path.basename(p)[2:6]) for p in files]
+seq = []
+for k, (n, p) in enumerate(zip(nums, files)):
+    nxt = nums[k + 1] if k + 1 < len(nums) else n + (nums[1] - nums[0] if len(nums) > 1 else 1)
+    for m in range(n, nxt): seq.append((m, p))
+for m, fp in seq:
     im = Image.open(fp).convert('RGBA'); W, H = im.size; d = ImageDraw.Draw(im, 'RGBA')
-    t = i / 24.0
+    t = (m - 1) / 24.0
     if mode == 'camera':
         # viewfinder: 16:9 safe frame corners, REC indicator with timer, focus reticle, exposure scale, mode strip
         m = int(W * 0.035); L = int(W * 0.05)
@@ -50,5 +56,5 @@ for i, fp in enumerate(files):
         d.rounded_rectangle([bx0, by, bx1, by + 8], radius=4, fill=(60, 66, 80))
         if prog > 0: d.rounded_rectangle([bx0, by, bx0 + int((bx1 - bx0) * prog), by + 8], radius=4, fill=TURQ)
         d.text((bx1 - 120, by - 34), "Shared" if prog >= 1 else "Sharing…", font=font(22), fill=TURQ if prog >= 1 else (200, 200, 200))
-    im.convert('RGB').save(os.path.join(dst, os.path.basename(fp)))
-print('overlaid', len(files), 'frames ->', dst)
+    im.convert('RGB').save(os.path.join(dst, f'f_{m:04d}.png'))
+print('overlaid', len(seq), 'frames ->', dst)

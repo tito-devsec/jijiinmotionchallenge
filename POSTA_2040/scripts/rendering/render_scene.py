@@ -17,8 +17,11 @@ t0 = time.time()
 mod.build(scn, quality)
 print(f'[{sid}] built in {time.time()-t0:.1f}s, objects={len(bpy.data.objects)}')
 sc = bpy.context.scene
+SAMPLE_CAP = int(os.environ.get('POSTA_SAMPLES', '16'))
 if quality == 'preview':
-    sc.render.resolution_percentage = 50; sc.cycles.samples = min(sc.cycles.samples, 16)
+    sc.render.resolution_percentage = 50; sc.cycles.samples = min(sc.cycles.samples, 8)
+else:
+    sc.cycles.samples = min(sc.cycles.samples, SAMPLE_CAP); sc.cycles.adaptive_threshold = 0.06
 out = os.path.join(ROOT, 'renders', sid + ('_preview' if quality == 'preview' else '')); os.makedirs(out, exist_ok=True)
 frames = list(range(start, end + 1, step))
 if quality == 'still':  # one representative frame (arg 3 = frame) at full quality

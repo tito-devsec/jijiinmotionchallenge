@@ -252,3 +252,69 @@ def add_grade(shadows=(0.98, 1.0, 1.05), midtones=(1.0, 1.0, 1.0), highlights=(1
     cb = nt.nodes.new('CompositorNodeColorBalance'); cb.correction_method = 'LIFT_GAMMA_GAIN'
     cb.lift = tuple(shadows); cb.gamma = tuple(midtones); cb.gain = tuple(highlights)
     nt.links.new(src, cb.inputs['Image']); nt.links.new(cb.outputs[0], comp.inputs[0])
+
+# ----------------------------------------------------------------- shared helpers for character / site scenes
+def split_buildings(objs, center, radius, name='CITY_BUILD_NEW'):
+    """Move whole buildings (by obj_id) whose centroid lies within radius of center into a new object. Returns it."""
+    import bmesh
+    o = objs['CITY_BUILDING']; me = o.data; n = len(me.vertices)
+    co = np.empty(n * 3); me.vertices.foreach_get('co', co); co = co.reshape(-1, 3)
+    ids = np.empty(n, dtype=np.int32); me.attributes['obj_id'].data.foreach_get('value', ids)
+    sel_ids = set()
+    for b in np.unique(ids):
+        m = ids == b
+        if math.hypot(co[m, 0].mean() - center[0], co[m, 1].mean() - center[1]) < radius: sel_ids.add(int(b))
+    inside = np.isin(ids, list(sel_ids))
+    new = o.copy(); new.data = me.copy(); new.name = name; new.data.name = name
+    for c in o.users_collection: c.objects.link(new)
+    for ob, drop in ((o, inside), (new, ~inside)):
+        bm = bmesh.new(); bm.from_mesh(ob.data); bm.verts.ensure_lookup_table()
+        bmesh.ops.delete(bm, geom=[bm.verts[i] for i in np.nonzero(drop)[0]], context='VERTS'); bm.to_mesh(ob.data); bm.free()
+    objs[name] = new
+    print('split buildings:', len(sel_ids), 'moved to', name)
+    return new
+
+def road_frame(x, y, r=14.0):
+    """Nearest land-road point to (x,y) and the local road direction (unit XY) via PCA of nearby road vertices."""
+    o = bpy.data.objects['CITY_ROAD']; co = np.empty(len(o.data.vertices) * 3); o.data.vertices.foreach_get('co', co); co = co.reshape(-1, 3)
+    co = co[co[:, 2] > 1.0]
+    i = np.hypot(co[:, 0] - x, co[:, 1] - y).argmin(); p = co[i]
+    near = co[np.hypot(co[:, 0] - p[0], co[:, 1] - p[1]) < r][:, :2] - p[:2]
+    if len(near) < 3: return (float(p[0]), float(p[1]), float(p[2])), (0.0, 1.0)
+    w, v = np.linalg.eigh(near.T @ near); d = v[:, -1]
+    return (float(p[0]), float(p[1]), float(p[2])), (float(d[0]), float(d[1]))
+
+def add_character(name, loc=(0, 0, 0), heading=0.0):
+    """Append a rigged character collection (HERO, WORKER, CIVILIAN_A/B/C, PASSENGER, DIVER); returns (collection, rig)."""
+    col = link_asset('characters.blend', name)
+    rig = bpy.data.objects.get('RIG_' + name)
+    if rig is None: rig = collection_root(col)
+    rig.location = loc; rig.rotation_euler = (0, 0, heading)
+    return col, rig
+
+def character_meshes(col):
+    return [o for o in col.all_objects if o.type == 'MESH']
+
+def apply_binary_character(col, progress=1.0, density=2500.0, size=0.028, seed=1.0, height_bias=0.6, band=0.18):
+    """Binary system on every mesh of a rigged character (modifier runs after the Armature, so glyphs follow the motion)."""
+    mods = []
+    for i, m in enumerate(character_meshes(col)):
+        mods.append(P.apply_binary(m, progress=progress, density=density, size=size, noise_scale=2.5, seed=seed + i, height_bias=height_bias, band=band))
+    return mods
+
+def import_node_group(blend, name):
+    if name in bpy.data.node_groups: return bpy.data.node_groups[name]
+    with bpy.data.libraries.load(os.path.join(P.ROOT, 'blender', 'assets', blend), link=False) as (src, dst): dst.node_groups = [name]
+    return bpy.data.node_groups[name]
+
+def screen_sequence(mat_name='MAT_PhoneScreen', seq_dir=None, first=1, count=None, offset=0, strength=3.5):
+    """Feed an image sequence into the phone screen emission."""
+    import glob as _g
+    mat = bpy.data.materials.get(mat_name)
+    files = sorted(_g.glob(os.path.join(seq_dir, 'f_*.png'))) if seq_dir else []
+    if not mat or not files: print('screen sequence skipped', seq_dir); return False
+    nt = mat.node_tree; tex = nt.nodes.get('ScreenImage'); img = bpy.data.images.load(files[0]); img.source = 'SEQUENCE'
+    tex.image = img; tex.image_user.frame_duration = count or len(files); tex.image_user.frame_start = first; tex.image_user.frame_offset = offset
+    tex.image_user.use_auto_refresh = True; tex.image_user.use_cyclic = True
+    b = next(n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'); nt.links.new(tex.outputs[0], b.inputs['Emission Color']); b.inputs['Emission Strength'].default_value = strength
+    return True
