@@ -321,7 +321,7 @@ def screen_sequence(mat_name='MAT_PhoneScreen', seq_dir=None, first=1, count=Non
     nt = mat.node_tree; tex = nt.nodes.get('ScreenImage'); img = bpy.data.images.load(files[0]); img.source = 'SEQUENCE'
     tex.image = img; tex.image_user.frame_duration = count or len(files); tex.image_user.frame_start = first; tex.image_user.frame_offset = offset
     tex.image_user.use_auto_refresh = True; tex.image_user.use_cyclic = True
-    if offset: tex.image_user.frame_offset = offset
+    if offset: tex.image_user.frame_offset = offset % max(1, (count or len(files)))   # stay inside the recorded clip
     # the display mesh has no UVs: map the landscape footage across it from its bounding box (long axis = image width)
     if not tex.inputs['Vector'].is_linked:
         tc = nt.nodes.new('ShaderNodeTexCoord'); sep = nt.nodes.new('ShaderNodeSeparateXYZ'); cmb = nt.nodes.new('ShaderNodeCombineXYZ')
