@@ -36,6 +36,9 @@ def load_city(style='real', crop=None, future=False, real_trees=False):
         if o: bpy.data.collections['CITY'].objects.link(o); objs['OCEAN_FAR'] = o
     if crop: crop_city(objs, *crop)
     P.city_materials(objs, style)
+    if style == 'binary':
+        for n in ('CITY_CROWNS', 'CITY_SPIRES'):
+            if n in objs: objs[n].material_slots[0].material = bpy.data.materials.get('MAT_WallDissolve') or P.dissolving_material('MAT_WallDissolve', (0.62, 0.58, 0.55, 1))
     if real_trees:
         import tree_lib
         tree_lib.load_real_trees(hide_lowpoly=True); tree_lib.set_tree_lod()
