@@ -518,14 +518,54 @@ def _snap_tree(nt):
         if n.type == 'GROUP' and n.node_tree: n_changed += _snap_tree(n.node_tree)
     return n_changed
 
+def _water_to_dive(scene):
+    """Underwater: the water itself is Dive Blue (#1E3A8A family), sand Silver Dancer — set explicitly, then exempted."""
+    dive, silver = HOT70['dive'], HOT70['silver']
+    for name in ('MAT_WaterVolume', 'MAT_LightShaft'):
+        m = bpy.data.materials.get(name)
+        if not m: continue
+        for n in m.node_tree.nodes:
+            if n.type == 'PRINCIPLED_VOLUME':
+                n.inputs['Color'].default_value = tuple(min(1, c * 3.2) for c in dive[:3]) + (1,)
+                n.inputs['Absorption Color'].default_value = tuple(min(1, 0.2 + c * 2.0) for c in dive[:3]) + (1,)
+            if n.type == 'EMISSION': n.inputs['Color'].default_value = tuple(min(1, c * 3) for c in dive[:3]) + (1,)
+    sand = bpy.data.materials.get('MAT_Sand')
+    if sand:
+        for n in sand.node_tree.nodes:
+            if n.type == 'VALTORGB':
+                for i, e in enumerate(n.color_ramp.elements): e.color = tuple(c * (0.55 + 0.45 * i / max(1, len(n.color_ramp.elements) - 1)) for c in silver[:3]) + (1,)
+            if n.type == 'BSDF_PRINCIPLED' and not n.inputs['Base Color'].is_linked: n.inputs['Base Color'].default_value = silver
+    rock = bpy.data.materials.get('MAT_ReefRock')   # encrusted reef rock in Green Texture shades, not orange
+    if rock:
+        for n in rock.node_tree.nodes:
+            if n.type == 'VALTORGB':
+                k = len(n.color_ramp.elements)
+                for i, e in enumerate(n.color_ramp.elements): e.color = tuple(c * (0.35 + 0.65 * i / max(1, k - 1)) for c in HOT70['green'][:3]) + (1,)
+    w = scene.world
+    if w and w.use_nodes:
+        for n in w.node_tree.nodes:
+            if n.type == 'VALTORGB':
+                k = len(n.color_ramp.elements)
+                for i, e in enumerate(n.color_ramp.elements): e.color = tuple(c * (0.15 + 0.9 * i / max(1, k - 1)) for c in dive[:3]) + (1,)
+            if n.type == 'BACKGROUND' and not n.inputs['Color'].is_linked: n.inputs['Color'].default_value = dive
+    for l in bpy.data.lights:
+        if l.name.startswith('UW_'): l.color = (0.85, 0.9, 1.0)
+
+_UNDERWATER_EXEMPT = ('watervolume', 'lightshaft', 'sand', 'watersurface', 'bubble', 'reefrock')
+
 def enforce_palette(scene=None):
     """Every design colour in the scene -> nearest HOT 70 colourway (materials, world, lights, compositor).
     Human skin/eyes/hair and photographic leaf textures are left natural."""
     scene = scene or bpy.context.scene; n = 0
+    underwater = 'MAT_WaterVolume' in bpy.data.materials
+    if underwater: _water_to_dive(scene)
     for m in bpy.data.materials:
-        if m.use_nodes and not any(x in m.name.lower() for x in _PALETTE_EXEMPT): n += _snap_tree(m.node_tree)
-    if scene.world and scene.world.use_nodes: n += _snap_tree(scene.world.node_tree)
+        low = m.name.lower()
+        if underwater and any(x in low for x in _UNDERWATER_EXEMPT): continue
+        if m.use_nodes and not any(x in low for x in _PALETTE_EXEMPT): n += _snap_tree(m.node_tree)
+    if scene.world and scene.world.use_nodes and not underwater: n += _snap_tree(scene.world.node_tree)
     for l in bpy.data.lights:
+        if underwater and l.name.startswith('UW_'): continue
         l.color = _snap(tuple(l.color), neutral_sat=0.4); n += 1   # warm-white key lights stay neutral so skin reads naturally
         if l.use_nodes and l.node_tree: n += _snap_tree(l.node_tree)
     if scene.use_nodes and scene.node_tree:   # compositor: only the haze colour of the mist mix, never grading controls
