@@ -20,7 +20,7 @@ col = C.get_collection('ROADSTER')
 M_BODY = P.new_mat('MAT_CarBody', P.PAL['white'], rough=0.22, metal=0.0, coat=1.0)
 M_BODY.node_tree.nodes['Principled BSDF'].inputs['Coat Roughness'].default_value = 0.03
 M_BLACK = P.new_mat('MAT_CarTrim', (0.012, 0.012, 0.014, 1), rough=0.45)
-M_GLASS = P.new_mat('MAT_CarGlass', (0.006, 0.006, 0.008, 1), rough=0.04, coat=1.0)
+M_GLASS = P.new_mat('MAT_CarGlass', (0.006, 0.006, 0.008, 1), rough=0.12, coat=0.6)
 M_RED = P.new_mat('MAT_CarTailLight', (0.6, 0.01, 0.01, 1), rough=0.2, emission=(1.0, 0.02, 0.02, 1), estrength=8.0)
 M_WHITE_LIGHT = P.new_mat('MAT_CarHeadLight', (0.9, 0.9, 0.9, 1), rough=0.2, emission=(1.0, 0.97, 0.9, 1), estrength=12.0)
 M_CHROME = P.new_mat('MAT_CarExhaust', (0.6, 0.6, 0.62, 1), rough=0.3, metal=1.0)
@@ -61,7 +61,8 @@ def body_mat(i, row, j):
     y0, y1 = STATIONS[i][0], STATIONS[i + 1][0]
     ymid = 0.5 * (y0 + y1)
     if row <= 1: return 1                      # lower sills / underbody black
-    if row >= 4 and -2.1 < ymid < 1.5: return 2  # canopy glass (hood tip & rear deck tip stay white)
+    if row >= 4 and -2.1 < ymid < 0.9: return 2  # side windows + roof glass
+    if row >= 5 and 0.9 <= ymid < 1.6: return 2  # narrowing canopy wedge on the hood
     return 0
 body = C.loft('CAR_BODY', rings, col, BODY_MATS, body_mat, cap_mat=(0, 0))
 
@@ -82,9 +83,9 @@ C.smooth(body, 32)
 
 # ----------------------------------------------------------------- details
 # front light bar (thin horizontal strip at the nose crease) + black lower grille/splitter
-C.box('CAR_LIGHT_FRONT', (0, 2.265, 0.49), (1.30, 0.06, 0.028), col, M_WHITE_LIGHT)
-C.box('CAR_GRILLE_FRONT', (0, 2.22, 0.36), (1.42, 0.22, 0.17), col, M_BLACK)
-C.box('CAR_SPLITTER', (0, 2.12, 0.14), (1.80, 0.50, 0.05), col, M_BLACK)
+C.box('CAR_LIGHT_FRONT', (0, 2.255, 0.485), (1.26, 0.05, 0.026), col, M_WHITE_LIGHT)
+C.box('CAR_GRILLE_FRONT', (0, 2.17, 0.34), (1.30, 0.20, 0.14), col, M_BLACK)
+C.box('CAR_SPLITTER', (0, 2.02, 0.15), (1.62, 0.42, 0.05), col, M_BLACK)
 # rear: black band with full-width red light bar
 C.box('CAR_REAR_BAND', (0, -2.29, 0.76), (1.86, 0.10, 0.10), col, M_BLACK)
 C.box('CAR_LIGHT_REAR', (0, -2.335, 0.765), (1.78, 0.03, 0.028), col, M_RED)
@@ -97,11 +98,9 @@ for i, x in enumerate((-0.48, -0.16, 0.16, 0.48)):
 # side vents (one per side) and sill blade
 for sx in (1, -1):
     C.box(f'CAR_VENT_{"R" if sx>0 else "L"}', (sx * 0.985, 0.88, 0.50), (0.05, 0.26, 0.04), col, M_BLACK)
-    C.box(f'CAR_SILL_{"R" if sx>0 else "L"}', (sx * 0.93, 0.0, 0.17), (0.14, 2.0, 0.10), col, M_BLACK)
+    C.box(f'CAR_SILL_{"R" if sx>0 else "L"}', (sx * 0.86, 0.0, 0.16), (0.10, 1.9, 0.08), col, M_BLACK)
 # underbody plate
 C.box('CAR_UNDERTRAY', (0, 0, 0.12), (1.70, 4.3, 0.04), col, M_BLACK)
-# spoiler lip on the rear deck edge
-C.box('CAR_SPOILER', (0, -2.30, 0.905), (1.32, 0.10, 0.03), col, M_BLACK)
 
 # ----------------------------------------------------------------- wheels (5-spoke black, white rim)
 def make_wheel(name, loc):
@@ -153,6 +152,6 @@ print('saved', BLEND)
 
 # ----------------------------------------------------------------- preview
 if not NO_RENDER:
-    C.studio(size=5.0, cam_loc=(5.6, 6.4, 1.9), target=(0, -0.1, 0.5), lens=42)
+    C.studio(size=5.0, cam_loc=(6.4, 5.0, 1.45), target=(0, -0.1, 0.5), lens=48)
     C.render(PREVIEW)
     print('rendered', PREVIEW)

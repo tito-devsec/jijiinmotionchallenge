@@ -174,14 +174,14 @@ def studio(size=6.0, cam_loc=(7, 8, 2.5), target=(0, 0, 0.6), lens=45, out=None,
     col = get_collection('STUDIO')
     grey = P.new_mat('MAT_StudioGrey', (0.22, 0.22, 0.23, 1), rough=0.7)
     # cyclorama profile (y, z) extruded along X
-    R = size * 3.0; H = size * 2.5; r = size * 0.8
+    R = size * 3.0; H = size * 6.0; r = size * 0.8
     prof = [(R * 1.5, 0.0), (-R + r, 0.0)]
     for i in range(1, 9):
         a = math.pi / 2 * i / 8
         prof.append((-R + r - r * math.sin(a), r - r * math.cos(a)))
     prof.append((-R, H))
     bm = bmesh.new()
-    W = R * 2.0
+    W = R * 5.0
     row0 = [bm.verts.new((-W, y, z)) for y, z in prof]; row1 = [bm.verts.new((W, y, z)) for y, z in prof]
     for i in range(len(prof) - 1): bm.faces.new((row0[i], row0[i + 1], row1[i + 1], row1[i]))
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)

@@ -53,11 +53,12 @@ def glyph_material(name='MAT_BinaryGlyph', c1='turq', c2='blue', strength=6.0):
     for n in list(nt.nodes): nt.nodes.remove(n)
     out = nt.nodes.new('ShaderNodeOutputMaterial')
     em = nt.nodes.new('ShaderNodeEmission')
-    attr = nt.nodes.new('ShaderNodeAttribute'); attr.attribute_type = 'INSTANCER'; attr.attribute_name = 'bit_rand'
-    ramp = nt.nodes.new('ShaderNodeValToRGB')
-    ramp.color_ramp.elements[0].color = PAL[c1]; ramp.color_ramp.elements[1].color = PAL[c2]
-    e2 = ramp.color_ramp.elements.new(0.85); e2.color = PAL['white']
-    pulse = nt.nodes.new('ShaderNodeAttribute'); pulse.attribute_type = 'INSTANCER'; pulse.attribute_name = 'pulse'
+    attr = nt.nodes.new('ShaderNodeAttribute'); attr.attribute_type = 'GEOMETRY'; attr.attribute_name = 'bit_rand'
+    ramp = nt.nodes.new('ShaderNodeValToRGB'); ramp.color_ramp.interpolation = 'CONSTANT'
+    ramp.color_ramp.elements[0].color = PAL[c1]; ramp.color_ramp.elements[1].position = 0.55; ramp.color_ramp.elements[1].color = PAL[c2]
+    e2 = ramp.color_ramp.elements.new(0.82); e2.color = PAL['white']
+    e3 = ramp.color_ramp.elements.new(0.95); e3.color = PAL['orange']
+    pulse = nt.nodes.new('ShaderNodeAttribute'); pulse.attribute_type = 'GEOMETRY'; pulse.attribute_name = 'pulse'
     mul = nt.nodes.new('ShaderNodeMath'); mul.operation = 'MULTIPLY_ADD'; mul.inputs[1].default_value = strength; mul.inputs[2].default_value = strength * 0.35
     nt.links.new(attr.outputs['Fac'], ramp.inputs[0]); nt.links.new(ramp.outputs[0], em.inputs[0])
     nt.links.new(pulse.outputs['Fac'], mul.inputs[0]); nt.links.new(mul.outputs[0], em.inputs[1])
@@ -87,7 +88,7 @@ def make_glyph_collection(name='GLYPHS', size=1.0, depth=0.12):
     font = bpy.data.fonts.load(font_path) if font_path else None
     mat = glyph_material()
     for ch in ('0', '1'):
-        cu = bpy.data.curves.new(f'glyph_{ch}', 'FONT'); cu.body = ch; cu.size = size; cu.extrude = depth / 2
+        cu = bpy.data.curves.new(f'glyph_{ch}', 'FONT'); cu.body = ch; cu.size = size; cu.extrude = depth / 2; cu.resolution_u = 2; cu.fill_mode = 'FRONT'
         cu.align_x = 'CENTER'; cu.align_y = 'CENTER'
         if font: cu.font = font
         ob = bpy.data.objects.new(f'glyph_{ch}', cu); col.objects.link(ob)
@@ -386,3 +387,32 @@ def nearest_building_top(x, y, radius=60):
     m = (np.abs(co[:, 0] - x) < radius) & (np.abs(co[:, 1] - y) < radius)
     if not m.any(): return None
     sub = co[m]; i = sub[:, 2].argmax(); return Vector(sub[i]), float(sub[i, 2])
+
+def best_street_spot(center, radius=300, building_r=35, tree_r=18, samples=400, seed=1):
+    """Pick a road point near center with many building vertices around and no trees close by. Returns (x, y, z)."""
+    import numpy as np
+    rng = np.random.default_rng(seed)
+    def verts(name):
+        o = bpy.data.objects[name]; co = np.empty(len(o.data.vertices) * 3); o.data.vertices.foreach_get('co', co); return co.reshape(-1, 3)
+    road, bld, tree = verts('CITY_ROAD'), verts('CITY_BUILDING'), verts('CITY_TREE')
+    cx, cy = center
+    cand = road[np.hypot(road[:, 0] - cx, road[:, 1] - cy) < radius]
+    cand = cand[rng.choice(len(cand), min(samples, len(cand)), replace=False)]
+    best, bs = None, -1
+    for p in cand:
+        db = np.hypot(bld[:, 0] - p[0], bld[:, 1] - p[1]); dt = np.hypot(tree[:, 0] - p[0], tree[:, 1] - p[1])
+        if (dt < tree_r).any() or (db < 6).any(): continue
+        score = int((db < building_r).sum()) + 0.5 * int(((db >= building_r) & (db < 80)).sum())
+        if score > bs: bs, best = score, p
+    return (float(best[0]), float(best[1]), float(best[2])) if best is not None else (cx, cy, ground_z(cx, cy))
+
+def clear_trees_near(path_points, r=25):
+    import numpy as np, bmesh
+    o = bpy.data.objects.get('CITY_TREE')
+    if not o: return
+    me = o.data; co = np.empty(len(me.vertices) * 3); me.vertices.foreach_get('co', co); co = co.reshape(-1, 3)
+    near = np.zeros(len(co), bool)
+    for p in path_points: near |= np.hypot(co[:, 0] - p[0], co[:, 1] - p[1]) < r
+    if near.any():
+        bm = bmesh.new(); bm.from_mesh(me); bm.verts.ensure_lookup_table()
+        bmesh.ops.delete(bm, geom=[bm.verts[i] for i in np.nonzero(near)[0]], context='VERTS'); bm.to_mesh(me); bm.free()

@@ -1,0 +1,29 @@
+"""SCENE 02 — real buildings transform into binary. Street level at Posta (Azikiwe / Samora), dolly forward and tilt up."""
+import bpy, os, sys, math
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'common'))
+import posta_lib as P, scene_lib as S
+
+def build(scn, quality):
+    S.fresh(); F = scn['frames']
+    objs = S.load_city('binary', crop=((-140, 190), 520))
+    S.ocean_material_upgrade(dusk=True)
+    b = objs['CITY_BUILDING']
+    md = P.apply_binary(b, progress=0.0, density=0.7, size=0.85, noise_scale=0.025, seed=3, height_bias=0.55, band=0.1)
+    S.key_progress(md, [(1, 0.0), (int(F * 0.12), 0.02), (int(F * 0.85), 1.0), (F, 1.0)]); S.drive_flow(md, speed=1.0)
+    t = objs['CITY_TREE']; mt = P.apply_binary(t, progress=0.0, density=0.4, size=0.5, noise_scale=0.05, seed=9, height_bias=0.3, band=0.15)
+    S.key_progress(mt, [(1, 0.0), (int(F * 0.25), 0.0), (int(F * 0.9), 1.0)]); S.drive_flow(mt, speed=1.0)
+    # roads start real here; small shimmer only at the end
+    r = objs['CITY_ROAD']; mr = P.apply_binary(r, progress=0.0, density=0.5, size=0.6, noise_scale=0.012, seed=11, height_bias=0.0, band=0.2)
+    S.key_progress(mr, [(int(F * 0.8), 0.0), (F, 0.08)]); S.drive_flow(mr, speed=1.5)
+    S.world_dusk(strength=0.035, sun_elev=7)
+    sx, sy, sz = P.best_street_spot((-130, 200), radius=260); print('street spot', sx, sy, sz)
+    top = P.nearest_building_top(sx, sy, 60); tx, ty, th = (top[0].x, top[0].y, top[1]) if top else (sx + 30, sy + 30, sz + 30)
+    print('hero building', tx, ty, th)
+    import math as _m
+    ang = _m.atan2(ty - sy, tx - sx); d0 = 45.0
+    c0 = (tx - _m.cos(ang) * d0, ty - _m.sin(ang) * d0, sz + 1.7); c1 = (tx - _m.cos(ang) * (d0 - 14), ty - _m.sin(ang) * (d0 - 14), sz + 5.0)
+    P.clear_trees_near([c0, c1, (sx, sy)], 28)
+    cam = P.add_camera(loc=c0, target=(tx, ty, sz + 8), lens=24, dof_target=30, fstop=4)
+    S.cam_path(cam, [(1, c0), (F, c1)], [(1, (tx, ty, sz + 6)), (F, (tx, ty, th + 6))])
+    P.setup_render(samples=28, motion_blur=False, frame_end=F)
+    S.frame_range(scn)
