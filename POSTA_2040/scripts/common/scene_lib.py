@@ -322,6 +322,13 @@ def screen_sequence(mat_name='MAT_PhoneScreen', seq_dir=None, first=1, count=Non
     tex.image = img; tex.image_user.frame_duration = count or len(files); tex.image_user.frame_start = first; tex.image_user.frame_offset = offset
     tex.image_user.use_auto_refresh = True; tex.image_user.use_cyclic = True
     if offset: tex.image_user.frame_offset = offset
+    # the display mesh has no UVs: map the landscape footage across it from its bounding box (long axis = image width)
+    if not tex.inputs['Vector'].is_linked:
+        tc = nt.nodes.new('ShaderNodeTexCoord'); sep = nt.nodes.new('ShaderNodeSeparateXYZ'); cmb = nt.nodes.new('ShaderNodeCombineXYZ')
+        inv = nt.nodes.new('ShaderNodeMath'); inv.operation = 'SUBTRACT'; inv.inputs[0].default_value = 1.0
+        nt.links.new(tc.outputs['Generated'], sep.inputs[0]); nt.links.new(sep.outputs['Y'], inv.inputs[1])
+        nt.links.new(inv.outputs[0], cmb.inputs['X']); nt.links.new(sep.outputs['X'], cmb.inputs['Y'])
+        nt.links.new(cmb.outputs[0], tex.inputs['Vector'])
     b = next(n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'); nt.links.new(tex.outputs[0], b.inputs['Emission Color']); b.inputs['Emission Strength'].default_value = strength
     return True
 
