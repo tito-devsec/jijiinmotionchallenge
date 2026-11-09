@@ -26,7 +26,7 @@ def build(scn, quality):
         phone.matrix_world = M @ Matrix.Translation((0, pb.length * 0.9, 0.02)) @ Euler((math.radians(-90), 0, math.radians(90)), 'XYZ').to_matrix().to_4x4()
         phone.keyframe_insert('location', frame=f); phone.keyframe_insert('rotation_euler', frame=f)
     sc.frame_set(1)
-    S.screen_sequence(seq_dir=os.path.join(P.ROOT, 'renders', 's09_ui'), strength=2.6)
+    S.screen_sequence(seq_dir=os.path.join(P.ROOT, 'renders', 's09_ui'), strength=2.6, flip=True)
     # Posta 2040 skyline far away on the horizon: a few tall boxes in silhouette (real city out of frame range)
     for i in range(14):
         h = [60, 120, 90, 200, 150, 80, 260, 110, 170, 70, 140, 230, 95, 60][i]
