@@ -25,6 +25,7 @@ if quality == 'preview':
     sc.render.resolution_percentage = 50; sc.cycles.samples = min(sc.cycles.samples, 8); sc.cycles.adaptive_threshold = 0.1
 else:
     sc.cycles.samples = min(sc.cycles.samples, SAMPLE_CAP); sc.cycles.adaptive_threshold = 0.06
+    sc.render.resolution_percentage = int(os.environ.get('POSTA_RES_PCT', '100'))   # final: 75 % then Lanczos-upscaled to 720p in the edit
 out = os.path.join(ROOT, 'renders', sid + ('_preview' if quality == 'preview' else '')); os.makedirs(out, exist_ok=True)
 frames = list(range(start, end + 1, step))
 if quality == 'still':  # one representative frame (arg 3 = frame) at full quality

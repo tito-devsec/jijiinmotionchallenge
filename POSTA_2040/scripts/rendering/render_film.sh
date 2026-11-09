@@ -5,7 +5,8 @@
 cd "$(dirname "$0")/../.."
 MODE=${1:-preview}; B=/opt/blender/blender; RS="$PWD/scripts/rendering/render_scene.py"
 if [ "$MODE" = preview ]; then SUF=_preview; else SUF=""; fi
-declare -A STEP=( [s01]=2 [s02]=2 [s03]=3 [s04]=3 [s05]=2 [s06]=3 [s07]=3 [s08]=2 [s09]=3 [s09b]=2 [s10]=2 [s11]=3 [s12]=2 [s13]=2 [s14]=2 )
+declare -A STEP=( [s01]=2 [s02]=3 [s03]=3 [s04]=3 [s05]=3 [s06]=3 [s07]=2 [s08]=2 [s09]=2 [s09b]=2 [s10]=2 [s11]=3 [s12]=2 [s13]=2 [s14]=2 )
+[ "$MODE" = final ] && export POSTA_RES_PCT=${POSTA_RES_PCT:-75}
 [ "$MODE" = preview ] && for k in "${!STEP[@]}"; do STEP[$k]=3; done
 log(){ echo "$(date +%H:%M:%S) $*"; }
 clip(){ mkdir -p renders/clips; d=renders/$1; [ -d renders/$1_ui ] && d=renders/$1_ui
