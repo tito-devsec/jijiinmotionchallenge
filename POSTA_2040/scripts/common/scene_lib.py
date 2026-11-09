@@ -185,7 +185,7 @@ def enable_mist(start=200, depth=1500, color=(0.35, 0.5, 0.8, 1), strength=0.7):
     # glow for emissive glyphs
     glare = nt.nodes.new('CompositorNodeGlare'); glare.glare_type = 'BLOOM' if hasattr(glare, 'glare_type') else None
     try:
-        glare.inputs['Threshold'].default_value = 1.2; glare.inputs['Strength'].default_value = 0.25
+        glare.inputs['Threshold'].default_value = 2.0; glare.inputs['Strength'].default_value = 0.15
     except Exception:
         glare.threshold = 1.2
     nt.links.new(mix.outputs[0], glare.inputs[0]); nt.links.new(glare.outputs[0], comp.inputs[0])
@@ -389,9 +389,11 @@ def world_bluehour(sun_energy=0.25, strength=0.6):
     mr = nt.nodes.new('ShaderNodeMapRange'); mr.inputs['From Min'].default_value = -0.05; mr.inputs['From Max'].default_value = 0.6
     nt.links.new(sep.outputs['Z'], mr.inputs['Value'])
     ramp = nt.nodes.new('ShaderNodeValToRGB'); el = ramp.color_ramp.elements
-    el[0].position = 0.0; el[0].color = (0.55, 0.28, 0.16, 1)
-    e = el.new(0.12); e.color = (0.22, 0.16, 0.3, 1)
-    el[1].position = 1.0; el[1].color = (0.012, 0.03, 0.12, 1)
+    H = P.HOT70   # horizon Thermo Orange glow -> Quiet Violet band -> Dive Blue -> Night Pulse zenith
+    el[0].position = 0.0; el[0].color = tuple(c * 0.55 for c in H['thermo'][:3]) + (1,)
+    el[1].position = 1.0; el[1].color = tuple(c * 0.6 for c in H['night'][:3]) + (1,)
+    e = el.new(0.1); e.color = tuple(c * 0.35 for c in H['violet'][:3]) + (1,)
+    e = el.new(0.35); e.color = tuple(c * 0.45 for c in H['dive'][:3]) + (1,)
     nt.links.new(mr.outputs['Result'], ramp.inputs[0]); nt.links.new(ramp.outputs[0], bg.inputs['Color']); bg.inputs['Strength'].default_value = strength
     nt.links.new(bg.outputs[0], out.inputs[0])
     sun = bpy.data.objects.get('SUN')
@@ -406,15 +408,15 @@ def apply_bluehour_city(objs):
     apply_future_materials(objs)
     w = bpy.data.materials['MAT_Wall2040']; nt = w.node_tree
     for n in nt.nodes:
-        if n.type == 'MATH' and n.operation == 'GREATER_THAN' and abs(n.inputs[1].default_value - 0.94) < 1e-3: n.inputs[1].default_value = 0.55
-        if n.type == 'MATH' and n.operation == 'MULTIPLY' and abs(n.inputs[1].default_value - 0.25) < 1e-3: n.inputs[1].default_value = 4.0
-    b = nt.nodes['Principled BSDF']; b.inputs['Emission Color'].default_value = (1.0, 0.68, 0.36, 1)
-    crown = P.new_mat('MAT_Crown', (0.35, 0.28, 0.12, 1), 0.2, 1.0, emission=(1.0, 0.72, 0.3, 1), estrength=2.2)
+        if n.type == 'MATH' and n.operation == 'GREATER_THAN' and abs(n.inputs[1].default_value - 0.94) < 1e-3: n.inputs[1].default_value = 0.76
+        if n.type == 'MATH' and n.operation == 'MULTIPLY' and abs(n.inputs[1].default_value - 0.25) < 1e-3: n.inputs[1].default_value = 1.3
+    b = nt.nodes['Principled BSDF']; b.inputs['Emission Color'].default_value = P.HOT70['thermo']
+    crown = P.new_mat('MAT_Crown', (0.35, 0.28, 0.12, 1), 0.2, 1.0, emission=P.HOT70['thermo'], estrength=0.7)
     if 'CITY_CROWNS' in objs: objs['CITY_CROWNS'].material_slots[0].material = crown
-    if 'CITY_SPIRES' in objs: objs['CITY_SPIRES'].material_slots[0].material = P.new_mat('MAT_Spire', (0.8, 0.8, 0.8, 1), 0.3, 1.0, emission=(1.0, 0.86, 0.6, 1), estrength=6.0)
-    r = bpy.data.materials['MAT_Road2040']; rb = r.node_tree.nodes['Principled BSDF']; rb.inputs['Emission Color'].default_value = (1.0, 0.5, 0.16, 1)
+    if 'CITY_SPIRES' in objs: objs['CITY_SPIRES'].material_slots[0].material = P.new_mat('MAT_Spire', (0.8, 0.8, 0.8, 1), 0.3, 1.0, emission=P.HOT70['silver'], estrength=2.5)
+    r = bpy.data.materials['MAT_Road2040']; rb = r.node_tree.nodes['Principled BSDF']; rb.inputs['Emission Color'].default_value = P.HOT70['thermo']
     for n in r.node_tree.nodes:
-        if n.type == 'MATH' and n.operation == 'MULTIPLY': n.inputs[1].default_value = 2.2
+        if n.type == 'MATH' and n.operation == 'MULTIPLY': n.inputs[1].default_value = 0.9
         if n.type == 'VALTORGB': n.color_ramp.elements[0].position = 0.9; n.color_ramp.elements[1].position = 0.97
 
 def add_headphones(rig, color=(0.03, 0.03, 0.035, 1), accent=None):

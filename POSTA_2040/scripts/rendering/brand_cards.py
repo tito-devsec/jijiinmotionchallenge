@@ -9,7 +9,8 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import numpy as np
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 W, H, FPS = 1280, 720, 24
-PAPER = (243, 240, 232); INK = (12, 14, 18); COBALT = (7, 85, 201); ORANGE = (255, 101, 13); YELLOW = (246, 201, 40); TEAL = (0, 198, 168); GREEN = (178, 222, 60); SAGE = (196, 214, 170)
+# HOT 70 colourways only: Silver Dancer paper, Night Pulse ink, Dive Blue, Thermo Orange (+deep), Quiet Violet, Green Texture
+PAPER = (0xD1, 0xD5, 0xDB); INK = (0x1A, 0x1A, 0x1D); COBALT = (0x1E, 0x3A, 0x8A); ORANGE = (0xFF, 0x8C, 0x33); YELLOW = (0xE6, 0x51, 0x00); TEAL = (0x4F, 0x7F, 0x67); GREEN = (0xFF, 0x8C, 0x33); SAGE = (0x9B, 0x86, 0xBD)
 rng = random.Random(70)
 
 def font(sz, bold=True):
@@ -84,14 +85,14 @@ def render_open(out):
             txt.putalpha(txt.getchannel('A').point(lambda v: int(v * a))); im.alpha_composite(txt)
         # fade out last 0.4 s to black (next shot opens at ground level)
         fo = max(0.0, (t - 2.6) / 0.4)
-        if fo: im = Image.blend(im, Image.new('RGBA', (W, H), (0, 0, 0, 255)), fo)
+        if fo: im = Image.blend(im, Image.new('RGBA', (W, H), INK + (255,)), fo)
         im.convert('RGB').save(os.path.join(out, f'f_{i+1:04d}.png'))
     print('open card', N, 'frames')
 
 def render_close(out):
     os.makedirs(out, exist_ok=True); N = int(5.0 * FPS); base = paper_texture().convert('RGBA')
     pillars = [('01', 'MAISHA YA MIJI YA TZ', 'Tanzanian city elements — the real Posta map, Kivukoni, the harbour'),
-               ('02', 'RANGI ZA HOT 70', 'Colour drawn from the Infinix HOT 70 colourways'),
+               ('02', 'RANGI ZA HOT 70', 'Thermo Orange · Quiet Violet · Green Texture · Night Pulse · Silver Dancer · Dive Blue'),
                ('03', 'MTAZAMO NA UBUNIFU WAKO', 'Personal signature — code, procedural art, Dar es Salaam')]
     for i in range(N):
         t = i / FPS; im = base.copy(); layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(layer)
@@ -106,13 +107,13 @@ def render_close(out):
             if a <= 0: continue
             y = 90 + k * 140; x = 90 + int(30 * (1 - a))
             dd.text((x, y), num, font=font(54), fill=[COBALT, ORANGE, TEAL][k]); dd.text((x + 90, y + 4), sw, font=font(40), fill=INK)
-            dd.text((x + 92, y + 58), en, font=font(22), fill=(60, 64, 72))
+            dd.text((x + 92, y + 58), en, font=font(22), fill=INK)
             dd.line([(x, y + 110), (x + 900, y + 110)], fill=INK, width=2)
         a = ease((t - 2.4) / 0.6)
         if a > 0:
             title_block(txt, 'JIJI IN MOTION', (90, 540), 64, INK, GREEN, 'MOTION'); dd.text((94, 620), 'A film built in code by tito-devsec  ·  Map data © OpenStreetMap contributors', font=font(20), fill=INK)
         txt.putalpha(txt.getchannel('A').point(lambda v: int(v * min(1, ease(t / 0.6))))); im.alpha_composite(txt)
-        fi = min(1.0, t / 0.5); im = Image.blend(Image.new('RGBA', (W, H), (0, 0, 0, 255)), im, fi)
+        fi = min(1.0, t / 0.5); im = Image.blend(Image.new('RGBA', (W, H), INK + (255,)), im, fi)
         im.convert('RGB').save(os.path.join(out, f'f_{i+1:04d}.png'))
     print('close card', N, 'frames')
 

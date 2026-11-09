@@ -14,9 +14,15 @@ def hex2rgb(h, a=1.0):
     f = lambda c: c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
     return (f(r), f(g), f(b), a)
 
-PAL = {
-    'space': hex2rgb('#090D16'), 'blue': hex2rgb('#0755C9'), 'turq': hex2rgb('#00C6A8'),
-    'orange': hex2rgb('#FF650D'), 'yellow': hex2rgb('#F6C928'), 'white': hex2rgb('#F3F0E8'),
+# Infinix HOT 70 colourways — the ONLY colours used for design in this film (client direction)
+HOT70 = {
+    'thermo': hex2rgb('#FF8C33'), 'thermo_deep': hex2rgb('#E65100'), 'violet': hex2rgb('#9B86BD'),
+    'green': hex2rgb('#4F7F67'), 'night': hex2rgb('#1A1A1D'), 'silver': hex2rgb('#D1D5DB'), 'dive': hex2rgb('#1E3A8A'),
+}
+PAL = {  # legacy keys mapped onto the HOT 70 colourways
+    'space': HOT70['night'], 'blue': HOT70['dive'], 'turq': HOT70['violet'],
+    'orange': HOT70['thermo'], 'yellow': HOT70['thermo_deep'], 'white': HOT70['silver'],
+    **HOT70,
 }
 
 def find_font(candidates):
@@ -56,10 +62,10 @@ def glyph_material(name='MAT_BinaryGlyph', c1='turq', c2='blue', strength=6.0):
     em = nt.nodes.new('ShaderNodeEmission')
     oi = nt.nodes.new('ShaderNodeObjectInfo')
     ramp = nt.nodes.new('ShaderNodeValToRGB'); ramp.color_ramp.interpolation = 'CONSTANT'
-    ramp.color_ramp.elements[0].color = (0.22, 0.62, 1.0, 1); ramp.color_ramp.elements[1].position = 0.45; ramp.color_ramp.elements[1].color = PAL[c2]
-    e2 = ramp.color_ramp.elements.new(0.78); e2.color = (0.75, 0.9, 1.0, 1)
-    e3 = ramp.color_ramp.elements.new(0.93); e3.color = PAL['orange']
-    e4 = ramp.color_ramp.elements.new(0.97); e4.color = PAL[c1]
+    ramp.color_ramp.elements[0].color = HOT70['silver']; ramp.color_ramp.elements[1].position = 0.22; ramp.color_ramp.elements[1].color = HOT70['dive']
+    e2 = ramp.color_ramp.elements.new(0.7); e2.color = HOT70['violet']
+    e3 = ramp.color_ramp.elements.new(0.86); e3.color = HOT70['green']
+    e4 = ramp.color_ramp.elements.new(0.93); e4.color = HOT70['thermo']
     nt.links.new(oi.outputs['Random'], ramp.inputs[0]); nt.links.new(ramp.outputs[0], em.inputs[0])
     tval = nt.nodes.new('ShaderNodeValue'); tval.name = 'time'; tval.label = 'time'
     fc = tval.outputs[0].driver_add('default_value'); fc.driver.expression = 'frame/24.0'
@@ -73,7 +79,8 @@ def glyph_material(name='MAT_BinaryGlyph', c1='turq', c2='blue', strength=6.0):
     nt.links.new(em.outputs[0], out.inputs[0])
     return m
 
-def holo_grid_nodes(nt, floor=3.2, bay=2.6, line_color=(0.25, 0.7, 1.0, 1), line_strength=5.0):
+def holo_grid_nodes(nt, floor=3.2, bay=2.6, line_color=None, line_strength=1.6):
+    line_color = line_color or HOT70['silver']
     """Holographic building shell: glowing floor lines and mullions over translucent navy glass, a few lit panels.
     Returns the shader output socket."""
     tc = nt.nodes.new('ShaderNodeTexCoord'); sep = nt.nodes.new('ShaderNodeSeparateXYZ'); nt.links.new(tc.outputs['Object'], sep.inputs[0])
@@ -82,19 +89,19 @@ def holo_grid_nodes(nt, floor=3.2, bay=2.6, line_color=(0.25, 0.7, 1.0, 1), line
         fr = nt.nodes.new('ShaderNodeMath'); fr.operation = 'FRACT'; nt.links.new(d.outputs[0], fr.inputs[0])
         a = nt.nodes.new('ShaderNodeMath'); a.operation = 'LESS_THAN'; a.inputs[1].default_value = width; nt.links.new(fr.outputs[0], a.inputs[0])
         return a.outputs[0]
-    lz = lines(sep.outputs['Z'], floor, 0.06); lx = lines(sep.outputs['X'], bay, 0.035); ly = lines(sep.outputs['Y'], bay, 0.035)
+    lz = lines(sep.outputs['Z'], floor, 0.035); lx = lines(sep.outputs['X'], bay, 0.02); ly = lines(sep.outputs['Y'], bay, 0.02)
     m1 = nt.nodes.new('ShaderNodeMath'); m1.operation = 'MAXIMUM'; nt.links.new(lz, m1.inputs[0]); nt.links.new(lx, m1.inputs[1])
     m2 = nt.nodes.new('ShaderNodeMath'); m2.operation = 'MAXIMUM'; nt.links.new(m1.outputs[0], m2.inputs[0]); nt.links.new(ly, m2.inputs[1])
     # occasional bright holographic panels (cell-random)
     snap = nt.nodes.new('ShaderNodeVectorMath'); snap.operation = 'SNAP'; snap.inputs[1].default_value = (bay * 3, bay * 3, floor * 4); nt.links.new(tc.outputs['Object'], snap.inputs[0])
     wn = nt.nodes.new('ShaderNodeTexWhiteNoise'); wn.noise_dimensions = '3D'; nt.links.new(snap.outputs[0], wn.inputs['Vector'])
     pan = nt.nodes.new('ShaderNodeMath'); pan.operation = 'GREATER_THAN'; pan.inputs[1].default_value = 0.9; nt.links.new(wn.outputs['Value'], pan.inputs[0])
-    pans = nt.nodes.new('ShaderNodeMath'); pans.operation = 'MULTIPLY'; pans.inputs[1].default_value = 0.35; nt.links.new(pan.outputs[0], pans.inputs[0])
+    pans = nt.nodes.new('ShaderNodeMath'); pans.operation = 'MULTIPLY'; pans.inputs[1].default_value = 0.12; nt.links.new(pan.outputs[0], pans.inputs[0])
     ls = nt.nodes.new('ShaderNodeMath'); ls.operation = 'MULTIPLY'; ls.inputs[1].default_value = line_strength; nt.links.new(m2.outputs[0], ls.inputs[0])
     tot = nt.nodes.new('ShaderNodeMath'); tot.operation = 'ADD'; nt.links.new(ls.outputs[0], tot.inputs[0]); nt.links.new(pans.outputs[0], tot.inputs[1])
-    base = nt.nodes.new('ShaderNodeMath'); base.operation = 'ADD'; base.inputs[1].default_value = 0.04; nt.links.new(tot.outputs[0], base.inputs[0])
+    base = nt.nodes.new('ShaderNodeMath'); base.operation = 'ADD'; base.inputs[1].default_value = 0.008; nt.links.new(tot.outputs[0], base.inputs[0])
     em = nt.nodes.new('ShaderNodeEmission'); em.inputs['Color'].default_value = line_color; nt.links.new(base.outputs[0], em.inputs['Strength'])
-    tr = nt.nodes.new('ShaderNodeBsdfTransparent'); tr.inputs['Color'].default_value = (0.75, 0.85, 1.0, 1)
+    tr = nt.nodes.new('ShaderNodeBsdfTransparent'); tr.inputs['Color'].default_value = tuple(0.3 + 0.9 * c for c in HOT70['dive'][:3]) + (1,)
     add = nt.nodes.new('ShaderNodeAddShader'); nt.links.new(tr.outputs[0], add.inputs[0]); nt.links.new(em.outputs[0], add.inputs[1])
     return add.outputs[0]
 
@@ -468,3 +475,61 @@ def clear_trees_near(path_points, r=25):
     if near.any():
         bm = bmesh.new(); bm.from_mesh(me); bm.verts.ensure_lookup_table()
         bmesh.ops.delete(bm, geom=[bm.verts[i] for i in np.nonzero(near)[0]], context='VERTS'); bm.to_mesh(me); bm.free()
+
+
+# ----------------------------------------------------------------- palette enforcement
+_PALETTE_EXEMPT = ('skin', 'eye', 'iris', 'pupil', 'sclera', 'teeth', 'tooth', 'lip', 'hair', 'brow', 'lash', 'leaves', 'leaf', 'bark', 'trunk', 'fruit', 'glyph_', 'screen')
+
+def _snap(c):
+    """Snap a linear RGB(A) colour to the nearest HOT 70 colourway, keeping its luminance."""
+    import colorsys
+    r, g, b = c[0], c[1], c[2]; a = c[3] if len(c) > 3 else 1.0
+    lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    if lum <= 1e-6: return (0.0, 0.0, 0.0, a)[:len(c)]
+    mx, mn = max(r, g, b), min(r, g, b)
+    sat = (mx - mn) / mx if mx > 0 else 0.0           # HSV saturation (robust for values near or above 1)
+    h = colorsys.rgb_to_hsv(r / mx, g / mx, b / mx)[0] if mx > 0 else 0.0
+    if sat < 0.18 or mx - mn < 0.03:
+        night, silver = HOT70['night'], HOT70['silver']
+        ln = 0.2126 * night[0] + 0.7152 * night[1] + 0.0722 * night[2]; ls = 0.2126 * silver[0] + 0.7152 * silver[1] + 0.0722 * silver[2]
+        t = max(0.0, min(1.0, (lum - ln) / (ls - ln))); base = tuple(night[i] * (1 - t) + silver[i] * t for i in range(3))
+    else:
+        best, bd = None, 9
+        for k in ('thermo', 'thermo_deep', 'violet', 'green', 'dive'):
+            pc = HOT70[k]; ph = colorsys.rgb_to_hsv(*pc[:3])[0]
+            d = min(abs(ph - h), 1 - abs(ph - h))
+            if d < bd: bd, best = d, pc
+        base = best[:3]
+    bl = 0.2126 * base[0] + 0.7152 * base[1] + 0.0722 * base[2]
+    k = lum / max(bl, 1e-6); out = tuple(x * k for x in base)
+    return (out + (a,)) if len(c) > 3 else out
+
+def _snap_tree(nt):
+    n_changed = 0
+    for n in nt.nodes:
+        if n.type == 'VALTORGB':
+            for e in n.color_ramp.elements: e.color = _snap(tuple(e.color)); n_changed += 1
+        for sock in n.inputs:
+            if any(w in sock.name for w in ('Lift', 'Gamma', 'Gain', 'Offset', 'Power', 'Slope', 'White', 'Black')): continue
+            if sock.type == 'RGBA' and not sock.is_linked and hasattr(sock, 'default_value'):
+                try: sock.default_value = _snap(tuple(sock.default_value)); n_changed += 1
+                except Exception: pass
+        if n.type == 'RGB': n.outputs[0].default_value = _snap(tuple(n.outputs[0].default_value)); n_changed += 1
+        if n.type == 'GROUP' and n.node_tree: n_changed += _snap_tree(n.node_tree)
+    return n_changed
+
+def enforce_palette(scene=None):
+    """Every design colour in the scene -> nearest HOT 70 colourway (materials, world, lights, compositor).
+    Human skin/eyes/hair and photographic leaf textures are left natural."""
+    scene = scene or bpy.context.scene; n = 0
+    for m in bpy.data.materials:
+        if m.use_nodes and not any(x in m.name.lower() for x in _PALETTE_EXEMPT): n += _snap_tree(m.node_tree)
+    if scene.world and scene.world.use_nodes: n += _snap_tree(scene.world.node_tree)
+    for l in bpy.data.lights:
+        l.color = _snap(tuple(l.color)); n += 1
+        if l.use_nodes and l.node_tree: n += _snap_tree(l.node_tree)
+    if scene.use_nodes and scene.node_tree:   # compositor: only the haze colour of the mist mix, never grading controls
+        for nd in scene.node_tree.nodes:
+            if nd.bl_idname == 'CompositorNodeMixRGB' and not nd.inputs[2].is_linked:
+                nd.inputs[2].default_value = _snap(tuple(nd.inputs[2].default_value)); n += 1
+    print('palette enforced on', n, 'colour values')

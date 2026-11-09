@@ -15,7 +15,8 @@ def build(scn, quality):
     heli, seat = S.hover_helicopter(F)
     rig, phone = S.cabin_passenger(seat, F)
     S.screen_sequence(seq_dir=os.path.join(P.ROOT, 'renders', 's09_ui'), strength=2.6)
-    lens = Vector((0.0217, 0.0673, -0.0065))     # main lens centre, phone-local (back face is -Z)
+    bpy.context.view_layer.update()
+    lens = phone.matrix_world.inverted() @ bpy.data.objects['PHONE_LENS_MAIN'].matrix_world.translation   # main lens centre, phone-local
     tgt = P.make_empty('CAM_TARGET', (0, 0, 0)); tgt.parent = phone
     cam = P.add_camera(loc=(0, 0, 0), target=tgt, lens=32, dof_target=tgt, fstop=5.6)
     cam.parent = phone; cam.data.clip_start = 0.001; cam.data.sensor_width = 36

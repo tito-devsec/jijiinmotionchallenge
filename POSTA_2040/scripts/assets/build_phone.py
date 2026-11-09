@@ -22,7 +22,7 @@ OUT_PREV = os.path.join(ROOT, 'previews')
 RENDER = '--no-render' not in sys.argv
 
 # ------------------------------------------------------------------ dimensions (metres)
-W, L, T = 0.076, 0.165, 0.0076           # width (X), length (Y), thickness (Z)
+W, L, T = 0.07912, 0.16792, 0.00749      # official HOT 70 (X6895B) dimensions: 79.12 x 167.92 x 7.49 mm
 R_CORNER = 0.0085                        # body corner radius
 HT = T / 2                               # half thickness; screen at +HT, back at -HT
 
@@ -42,14 +42,14 @@ ROOT_E = bpy.data.objects.new('PHONE_ROOT', None); ROOT_E.empty_display_size = 0
 
 # ------------------------------------------------------------------ materials
 def mat_frame():
-    m = P.new_mat('MAT_PhoneFrame', (0.40, 0.48, 0.34, 1), rough=0.32, metal=0.85)
+    m = P.new_mat('MAT_PhoneFrame', tuple(min(1, c * 1.35) for c in P.HOT70['green'][:3]) + (1,), rough=0.32, metal=0.85)  # Green Texture #4F7F67
     return m
 
 def mat_dark(): return P.new_mat('MAT_PhoneDark', (0.012, 0.012, 0.013, 1), rough=0.55)
 
 def mat_back():
     """Sage green back with low-contrast anisotropic feather / brush-stroke streaks (procedural)."""
-    m = P.new_mat('MAT_PhoneBack', (0.40, 0.50, 0.32, 1), rough=0.22, metal=0.0, coat=0.6)
+    m = P.new_mat('MAT_PhoneBack', P.HOT70['green'], rough=0.22, metal=0.0, coat=0.6)  # Green Texture #4F7F67
     nt = m.node_tree; b = next(n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED')
     tc = nt.nodes.new('ShaderNodeTexCoord')
     # streak field A: fine diagonal streaks (brush strokes)
@@ -82,7 +82,8 @@ def mat_back():
     nt.links.new(plume.outputs[0], comb.inputs[0]); nt.links.new(maskr.outputs[0], comb.inputs[1]); nt.links.new(faint.outputs[0], comb.inputs[2])
     # colour mix: base sage -> lighter sage/cream along streaks
     mix = nt.nodes.new('ShaderNodeMix'); mix.data_type = 'RGBA'; mix.blend_type = 'MIX'
-    mix.inputs['A'].default_value = (0.36, 0.46, 0.27, 1); mix.inputs['B'].default_value = (0.62, 0.72, 0.48, 1)
+    g = P.HOT70['green']  # Green Texture #4F7F67, with a lighter sheen of the same colourway along the feather streaks
+    mix.inputs['A'].default_value = g; mix.inputs['B'].default_value = tuple(min(1, c * 2.2) for c in g[:3]) + (1,)
     fac = nt.nodes.new('ShaderNodeMapRange'); fac.inputs['From Min'].default_value = 0.0; fac.inputs['From Max'].default_value = 1.2; fac.inputs['To Max'].default_value = 0.85
     nt.links.new(comb.outputs[0], fac.inputs['Value']); nt.links.new(fac.outputs[0], mix.inputs['Factor'])
     nt.links.new(mix.outputs['Result'], b.inputs['Base Color'])
@@ -145,7 +146,7 @@ MAT_LENS_GLASS = P.new_mat('MAT_PhoneLensGlass', (0.75, 0.85, 0.9, 1), rough=0.0
 MAT_LENS = P.new_mat('MAT_PhoneLensElement', (0.01, 0.012, 0.02, 1), rough=0.08, coat=0.8)
 MAT_LENS_IRIS = P.new_mat('MAT_PhoneLensIris', (0.08, 0.04, 0.14, 1), rough=0.15, metal=0.4)
 MAT_ACCENT = P.new_mat('MAT_PhoneAccent', (0.85, 0.22, 0.04, 1), rough=0.35)
-MAT_FLASH = P.new_mat('MAT_PhoneFlash', (0.95, 0.88, 0.62, 1), rough=0.1, emission=(1.0, 0.9, 0.6, 1), estrength=0.4)
+MAT_FLASH = P.new_mat('MAT_PhoneFlash', P.HOT70['silver'], rough=0.1, emission=P.HOT70['silver'], estrength=0.3)
 MAT_LOGO = P.new_mat('MAT_PhoneLogo', (0.75, 0.80, 0.72, 1), rough=0.25, metal=0.6)
 
 # ------------------------------------------------------------------ geometry helpers
@@ -329,11 +330,16 @@ for i, y in enumerate(LENS_Y):
         bm = bmesh.new(); prism(bm, circle_points(0.0022, 48), Z_ISL - 0.00070, Z_ISL - 0.00074, offset=off); finish(bm, 'PHONE_LensElement_3', [MAT_LENS])
         bm = bmesh.new(); dome_disc(bm, 0.0036, Z_ISL - 0.00074, 0.00022, 48, 5, offset=off, flip=True); finish(bm, 'PHONE_LensGlass_3', [MAT_LENS_GLASS])
 
-# LED flash: small rounded square to the right of the island (towards the centre => -X), near the top
-bm = bmesh.new(); prism(bm, rr_points(0.0030, 0.0030, 0.0008, 6), Z_BACK + 0.0002, Z_BACK - 0.00025, offset=(ISL_X - 0.0145, L / 2 - 0.0133, 0))
-FLASH = finish(bm, 'PHONE_Flash', [MAT_FLASH]); bevel(FLASH, 0.0002, 2, 40)
-bm = bmesh.new(); prism(bm, rr_points(0.0036, 0.0036, 0.0010, 6), Z_BACK + 0.0002, Z_BACK - 0.00012, offset=(ISL_X - 0.0145, L / 2 - 0.0133, 0))
+# Rear DUAL flash (official spec): two LEDs in one rounded window to the right of the island, near the top
+bm = bmesh.new(); prism(bm, rr_points(0.0036, 0.0074, 0.0012, 8), Z_BACK + 0.0002, Z_BACK - 0.00012, offset=(ISL_X - 0.0145, L / 2 - 0.0150, 0))
 finish(bm, 'PHONE_FlashRing', [MAT_RING])
+for i, dy in enumerate((0.0, -0.0036)):
+    bm = bmesh.new(); prism(bm, rr_points(0.0026, 0.0026, 0.0007, 6), Z_BACK + 0.0002, Z_BACK - 0.00025, offset=(ISL_X - 0.0145, L / 2 - 0.0132 + dy, 0))
+    fl = finish(bm, f'PHONE_Flash_{i + 1}', [MAT_FLASH]); bevel(fl, 0.0002, 2, 40)
+# Front DUAL flash (official spec): two tiny LEDs in the top bezel, either side of the earpiece slit
+for i, dx in enumerate((-0.0105, 0.0105)):
+    bm = bmesh.new(); prism(bm, rr_points(0.0016, 0.0010, 0.0004, 4), Z_GLASS - 0.00002, Z_GLASS - 0.00010, offset=(dx, L / 2 - 0.0026, 0))
+    finish(bm, f'PHONE_FrontFlash_{i + 1}', [MAT_FLASH])
 
 # ------------------------------------------------------------------ WORDMARK "Infinix" (vertical, bottom-left of back)
 font_path = P.find_font(['/usr/share/fonts/truetype/inter/InterDisplay-Medium.ttf', P.FONT_SANS, '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'])

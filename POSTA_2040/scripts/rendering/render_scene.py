@@ -15,6 +15,9 @@ spec = importlib.util.spec_from_file_location(sid, os.path.join(ROOT, 'scripts',
 mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
 t0 = time.time()
 mod.build(scn, quality)
+import posta_lib as _P; _P.enforce_palette()
+for _o in bpy.data.objects:   # practical/area lights light the scene but are never seen as glowing slabs
+    if _o.type == 'LIGHT': _o.visible_camera = False
 print(f'[{sid}] built in {time.time()-t0:.1f}s, objects={len(bpy.data.objects)}')
 sc = bpy.context.scene
 SAMPLE_CAP = int(os.environ.get('POSTA_SAMPLES', '12'))

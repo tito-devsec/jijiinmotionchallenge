@@ -15,7 +15,8 @@ def font_black(sz):
     for p in ('/usr/share/fonts/opentype/inter/InterDisplay-Black.otf', '/usr/share/fonts/opentype/inter/Inter-Black.otf'):
         if os.path.exists(p): return ImageFont.truetype(p, sz)
     return font(sz)
-WHITE = (243, 240, 232); TURQ = (0, 198, 168); ORANGE = (255, 101, 13)
+# HOT 70 colourways only
+WHITE = (0xD1, 0xD5, 0xDB); TURQ = (0x9B, 0x86, 0xBD); ORANGE = (0xFF, 0x8C, 0x33); DEEP = (0xE6, 0x51, 0x00); NIGHT = (0x1A, 0x1A, 0x1D); DIVE = (0x1E, 0x3A, 0x8A); GREENT = (0x4F, 0x7F, 0x67)
 files = sorted(glob.glob(os.path.join(src, 'f_*.png')))
 # fill frame-step gaps so the output is a contiguous 24 fps sequence (also usable as an image sequence on the phone screen)
 nums = [int(os.path.basename(p)[2:6]) for p in files]
@@ -34,37 +35,38 @@ for fno, fp in seq:
         for (x, y, sx, sy) in ((m, m, 1, 1), (W - m, m, -1, 1), (m, H - m, 1, -1), (W - m, H - m, -1, -1)):
             d.line([(x, y), (x + sx * L, y)], fill=WHITE, width=3); d.line([(x, y), (x, y + sy * L)], fill=WHITE, width=3)
         blink = (int(t * 2) % 2 == 0)
-        if blink: d.ellipse([m + 10, m + 26, m + 30, m + 46], fill=(230, 50, 40))
+        if blink: d.ellipse([m + 10, m + 26, m + 30, m + 46], fill=DEEP)
         mm, ss = divmod(int(t), 60); ff = int((t - int(t)) * 24)
         d.text((m + 42, m + 22), f"REC  {mm:02d}:{ss:02d}:{ff:02d}", font=font(26), fill=WHITE)
+        d.text((W - m - 120, m + 22), "2K · 30", font=font(24), fill=WHITE)   # rear 2K 30 fps: official HOT 70 spec
         cx, cy = W // 2, H // 2; r = 46
         d.rectangle([cx - r, cy - r, cx + r, cy + r], outline=TURQ, width=2)
         d.text((cx + r + 10, cy - 14), "AF", font=font(20), fill=TURQ)
         # bottom mode strip
-        modes = ["PHOTO", "VIDEO", "PORTRAIT"]; x = W // 2 - 150
+        modes = ["SUPER NIGHT", "VIDEO", "PORTRAIT"]; x = W // 2 - 225
         for k, name in enumerate(modes):
-            col = ORANGE if name == 'VIDEO' else (200, 200, 200)
-            d.text((x + k * 150, H - m - 34), name, font=font(22), fill=col)
+            col = ORANGE if name == 'VIDEO' else WHITE
+            d.text((x + k * 170 + (0 if k else -20), H - m - 34), name, font=font(22), fill=col)
         # zoom pill
-        d.rounded_rectangle([W // 2 - 60, H - m - 90, W // 2 + 60, H - m - 50], radius=20, fill=(0, 0, 0, 120), outline=(255, 255, 255, 90))
+        d.rounded_rectangle([W // 2 - 60, H - m - 90, W // 2 + 60, H - m - 50], radius=20, fill=NIGHT + (120,), outline=WHITE + (90,))
         d.text((W // 2 - 20, H - m - 83), "1x", font=font(22), fill=WHITE)
     elif mode == 'social':
         # clean share card: dark panel bottom third, caption, posting progress
-        panel = Image.new('RGBA', (W, int(H * 0.30)), (9, 13, 22, 215)); im.alpha_composite(panel, (0, H - panel.height))
+        panel = Image.new('RGBA', (W, int(H * 0.30)), NIGHT + (215,)); im.alpha_composite(panel, (0, H - panel.height))
         d = ImageDraw.Draw(im, 'RGBA')
         reveal = min(1.0, max(0.0, (t - 0.8) / 1.6)); cap = "I FOUND SOMETHING FROM TOMORROW."
         shown = cap[:int(len(cap) * reveal)]
         d.text((int(W * 0.06), H - panel.height + 36), shown, font=font(44), fill=WHITE)
-        d.text((int(W * 0.06), H - panel.height + 104), "Dar es Salaam · Kivukoni", font=font(24), fill=(170, 175, 185))
+        d.text((int(W * 0.06), H - panel.height + 104), "Dar es Salaam · Kivukoni", font=font(24), fill=TURQ)
         prog = min(1.0, max(0.0, (t - 3.0) / 2.0))
         bx0, bx1, by = int(W * 0.06), int(W * 0.94), H - 44
-        d.rounded_rectangle([bx0, by, bx1, by + 8], radius=4, fill=(60, 66, 80))
-        if prog > 0: d.rounded_rectangle([bx0, by, bx0 + int((bx1 - bx0) * prog), by + 8], radius=4, fill=TURQ)
-        d.text((bx1 - 120, by - 34), "Shared" if prog >= 1 else "Sharing…", font=font(22), fill=TURQ if prog >= 1 else (200, 200, 200))
+        d.rounded_rectangle([bx0, by, bx1, by + 8], radius=4, fill=DIVE)
+        if prog > 0: d.rounded_rectangle([bx0, by, bx0 + int((bx1 - bx0) * prog), by + 8], radius=4, fill=ORANGE)
+        d.text((bx1 - 120, by - 34), "Shared" if prog >= 1 else "Sharing…", font=font(22), fill=ORANGE if prog >= 1 else WHITE)
     elif mode == 'brand':
         # final title: JIJI IN MOTION (MOTION on the campaign green block) + tagline, left third, rising fade-in
         def ease(x): return 0.5 - 0.5 * math.cos(math.pi * max(0.0, min(1.0, x)))
-        GREEN = (178, 222, 60); INK = (12, 14, 18)
+        GREEN = ORANGE; INK = NIGHT
         a1 = ease((t - 2.0) / 1.0); a2 = ease((t - 3.0) / 1.0)
         lay = Image.new('RGBA', (W, H), (0, 0, 0, 0)); dl = ImageDraw.Draw(lay)
         fbig = font_black(int(H * 0.11)); x0 = int(W * 0.07); y0 = int(H * 0.36) + int(24 * (1 - a1))
