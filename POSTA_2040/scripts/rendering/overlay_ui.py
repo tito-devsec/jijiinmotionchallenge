@@ -22,10 +22,10 @@ nums = [int(os.path.basename(p)[2:6]) for p in files]
 seq = []
 for k, (n, p) in enumerate(zip(nums, files)):
     nxt = nums[k + 1] if k + 1 < len(nums) else n + (nums[1] - nums[0] if len(nums) > 1 else 1)
-    for m in range(n, nxt): seq.append((m, p))
-for m, fp in seq:
+    for fno in range(n, nxt): seq.append((fno, p))
+for fno, fp in seq:
     im = Image.open(fp).convert('RGBA'); W, H = im.size; d = ImageDraw.Draw(im, 'RGBA')
-    t = (m - 1) / 24.0
+    t = (fno - 1) / 24.0
     if mode == 'camera':
         # viewfinder: 16:9 safe frame corners, REC indicator with timer, focus reticle, exposure scale, mode strip
         m = int(W * 0.035); L = int(W * 0.05)
@@ -73,5 +73,5 @@ for m, fp in seq:
         dl.text((x0 + w1, y0), 'MOTION', font=fbig, fill=INK + (int(255 * a1),))
         dl.text((x0 + 4, y0 + int(H * 0.15) + int(16 * (1 - a2))), 'THE FUTURE IS WORTH CAPTURING.', font=font(int(H * 0.04)), fill=WHITE + (int(255 * a2),))
         im.alpha_composite(lay)
-    im.convert('RGB').save(os.path.join(dst, f'f_{m:04d}.png'))
+    im.convert('RGB').save(os.path.join(dst, f'f_{fno:04d}.png'))
 print('overlaid', len(seq), 'frames ->', dst)
