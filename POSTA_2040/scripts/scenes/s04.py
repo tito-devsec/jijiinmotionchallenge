@@ -13,7 +13,7 @@ def build(scn, quality):
             mx = P.apply_binary(objs[extra], progress=1.0, density=0.05, size=2.4, noise_scale=0.02, seed=4, height_bias=0.5, keep_shell=1.0); S.drive_flow(mx, speed=0.8)
     tr = objs['CITY_TREE']; mt = P.apply_binary(tr, progress=1.0, density=0.03, size=1.5, noise_scale=0.05, seed=9, height_bias=0.3); S.drive_flow(mt, speed=1.0)
     pv = objs['CITY_PAVING']; mp = P.apply_binary(pv, progress=0.6, density=0.02, size=1.6, noise_scale=0.01, seed=5, height_bias=0.0); S.drive_flow(mp, speed=2.0)
-    S.world_bluehour(sun_energy=0.3, strength=0.35)
+    S.world_bluehour(sun_energy=0.25, strength=0.12)
     S.binary_rain((-150, 150), size=1800, top=380, height=380, columns_per_km2=320, glyph=3.2, per_column=18, speed=14, look_at=(-300, -600, 300))
     S.enable_mist(start=300, depth=2500, color=(0.03, 0.06, 0.14, 1), strength=0.55)
     cam = P.add_camera(loc=(-500, -450, 160), target=(-150, 150, 20), lens=32)

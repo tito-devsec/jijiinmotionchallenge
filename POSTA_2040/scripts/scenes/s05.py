@@ -35,7 +35,7 @@ def build(scn, quality):
         P.key(rig, 1, loc=g(a, b)); P.key(rig, F, loc=g(a + sgn * walk * F * 0.95, b), interp='LINEAR')
         for m in S.apply_binary_character(col, progress=p0, density=1800, size=0.03, seed=20 + i, height_bias=0.7):
             S.key_progress(m, [(1, p0), (F, p1)]); S.drive_flow(m, speed=1.5)
-    S.world_bluehour(sun_energy=0.3, strength=0.3)
+    S.world_bluehour(sun_energy=0.25, strength=0.12)
     S.binary_rain((rx, ry), size=300, top=90, height=90, columns_per_km2=3000, glyph=0.6, look_at=g(-9, 3.2))
     S.enable_mist(start=30, depth=450, color=(0.03, 0.06, 0.14, 1), strength=0.55)
     # camera: low tracking shot beside the hero, then a slow push to a mid close-up as the face resolves

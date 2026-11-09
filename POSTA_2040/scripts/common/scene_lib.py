@@ -145,7 +145,7 @@ def facade_2040_material():
     """Realistic futuristic facade: glass + metal panel pattern by object-space brick texture, warm interior lights."""
     m = P.new_mat('MAT_Wall2040', (0.08, 0.12, 0.16, 1), 0.1, 0.9, coat=0.8); nt = m.node_tree; b = nt.nodes['Principled BSDF']
     tc = nt.nodes.new('ShaderNodeTexCoord'); brick = nt.nodes.new('ShaderNodeTexBrick')
-    brick.inputs['Scale'].default_value = 0.5; brick.inputs['Mortar Size'].default_value = 0.06; brick.inputs['Brick Width'].default_value = 1.6; brick.inputs['Row Height'].default_value = 1.0; brick.offset = 0.0
+    brick.inputs['Scale'].default_value = 1.15; brick.inputs['Mortar Size'].default_value = 0.1; brick.inputs['Brick Width'].default_value = 1.6; brick.inputs['Row Height'].default_value = 1.0; brick.offset = 0.0
     brick.inputs['Color1'].default_value = (0.05, 0.08, 0.11, 1); brick.inputs['Color2'].default_value = (0.09, 0.13, 0.17, 1); brick.inputs['Mortar'].default_value = (0.55, 0.58, 0.6, 1)
     nt.links.new(tc.outputs['Object'], brick.inputs['Vector']); nt.links.new(brick.outputs['Color'], b.inputs['Base Color'])
     # windows (dark bricks) are glossy; panels rougher
@@ -154,7 +154,7 @@ def facade_2040_material():
     nt.links.new(brick.outputs['Fac'], inv.inputs[0]); nt.links.new(inv.outputs[0], b.inputs['Roughness'])
     # random warm lit windows
     noise = nt.nodes.new('ShaderNodeTexWhiteNoise'); noise.noise_dimensions = '3D'
-    snap = nt.nodes.new('ShaderNodeVectorMath'); snap.operation = 'SNAP'; snap.inputs[1].default_value = (2.2 / 0.35 * 0.5, 2.2 / 0.35 * 0.5, 1.0 / 0.35)
+    snap = nt.nodes.new('ShaderNodeVectorMath'); snap.operation = 'SNAP'; snap.inputs[1].default_value = (1.6 / 1.15, 1.6 / 1.15, 1.0 / 1.15)
     nt.links.new(tc.outputs['Object'], snap.inputs[0]); nt.links.new(snap.outputs[0], noise.inputs['Vector'])
     gt = nt.nodes.new('ShaderNodeMath'); gt.operation = 'GREATER_THAN'; gt.inputs[1].default_value = 0.94
     nt.links.new(noise.outputs['Value'], gt.inputs[0])
@@ -408,12 +408,12 @@ def apply_bluehour_city(objs):
     apply_future_materials(objs)
     w = bpy.data.materials['MAT_Wall2040']; nt = w.node_tree
     for n in nt.nodes:
-        if n.type == 'MATH' and n.operation == 'GREATER_THAN' and abs(n.inputs[1].default_value - 0.94) < 1e-3: n.inputs[1].default_value = 0.76
-        if n.type == 'MATH' and n.operation == 'MULTIPLY' and abs(n.inputs[1].default_value - 0.25) < 1e-3: n.inputs[1].default_value = 1.3
+        if n.type == 'MATH' and n.operation == 'GREATER_THAN' and abs(n.inputs[1].default_value - 0.94) < 1e-3: n.inputs[1].default_value = 0.84
+        if n.type == 'MATH' and n.operation == 'MULTIPLY' and abs(n.inputs[1].default_value - 0.25) < 1e-3: n.inputs[1].default_value = 1.8
     b = nt.nodes['Principled BSDF']; b.inputs['Emission Color'].default_value = P.HOT70['thermo']
-    crown = P.new_mat('MAT_Crown', (0.35, 0.28, 0.12, 1), 0.2, 1.0, emission=P.HOT70['thermo'], estrength=0.7)
+    crown = P.new_mat('MAT_Crown', tuple(c * 0.5 for c in P.HOT70['dive'][:3]) + (1,), 0.08, 0.9, emission=P.HOT70['thermo'], estrength=0.18, coat=1.0)
     if 'CITY_CROWNS' in objs: objs['CITY_CROWNS'].material_slots[0].material = crown
-    if 'CITY_SPIRES' in objs: objs['CITY_SPIRES'].material_slots[0].material = P.new_mat('MAT_Spire', (0.8, 0.8, 0.8, 1), 0.3, 1.0, emission=P.HOT70['silver'], estrength=2.5)
+    if 'CITY_SPIRES' in objs: objs['CITY_SPIRES'].material_slots[0].material = P.new_mat('MAT_Spire', (0.8, 0.8, 0.8, 1), 0.3, 1.0, emission=P.HOT70['silver'], estrength=1.6)
     r = bpy.data.materials['MAT_Road2040']; rb = r.node_tree.nodes['Principled BSDF']; rb.inputs['Emission Color'].default_value = P.HOT70['thermo']
     for n in r.node_tree.nodes:
         if n.type == 'MATH' and n.operation == 'MULTIPLY': n.inputs[1].default_value = 0.9

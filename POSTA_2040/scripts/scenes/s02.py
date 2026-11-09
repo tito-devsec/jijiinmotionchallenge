@@ -13,7 +13,7 @@ def build(scn, quality):
     # roads start real here; small shimmer only at the end
     r = objs['CITY_ROAD']; mr = P.apply_binary(r, progress=0.0, density=0.5, size=0.6, noise_scale=0.012, seed=11, height_bias=0.0, band=0.2)
     S.key_progress(mr, [(int(F * 0.8), 0.0), (F, 0.08)]); S.drive_flow(mr, speed=1.5)
-    S.world_bluehour(sun_energy=0.35, strength=0.35)
+    S.world_bluehour(sun_energy=0.25, strength=0.12)
     sx, sy, sz = P.best_street_spot((-130, 200), radius=260); print('street spot', sx, sy, sz)
     top = P.nearest_building_top(sx, sy, 60); tx, ty, th = (top[0].x, top[0].y, top[1]) if top else (sx + 30, sy + 30, sz + 30)
     print('hero building', tx, ty, th)
