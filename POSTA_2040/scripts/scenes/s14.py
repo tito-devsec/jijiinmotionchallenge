@@ -7,7 +7,7 @@ import posta_lib as P, scene_lib as S
 def build(scn, quality):
     S.fresh(); F = scn['frames']
     # city far behind as a skyline (future style), seen from the harbour at dusk
-    objs = S.load_city('future'); S.ocean_material_upgrade(dusk=True); S.apply_future_materials(objs)
+    objs = S.load_city('future', future=True); S.ocean_material_upgrade(dusk=True); S.apply_future_materials(objs)
     S.world_dusk(strength=0.05, sun_elev=4, sun_az=262, sun_energy=0.8)
     S.enable_mist(start=200, depth=1800, color=(0.12, 0.16, 0.26, 1), strength=0.6)
     # product stage floating over the harbour water at (300,-250): a dark glossy disc

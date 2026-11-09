@@ -219,6 +219,9 @@ def ray_ellipsoid_scale(p, d, centre, rx, rz):
     far = (-b + math.sqrt(disc)) / (2 * a)
     return max(far, 0.0)
 
+def inside_ellipsoid(p, centre, rx, rz, margin=1.0):
+    return ((p.x - centre.x) / rx) ** 2 + ((p.y - centre.y) / rx) ** 2 + ((p.z - centre.z) / rz) ** 2 <= margin * margin
+
 def grow_branch(rng, base, d, length, r0, r1, segs, jitter, gravity, photo, curve=0.0, bend_axis=None):
     """Polyline from base along d for length; gravity (-droop/+lift in z per step), photo (pull toward +z), jitter random."""
     pts = [Vector(base)]; radii = [r0]; d = Vector(d).normalized()
@@ -289,7 +292,7 @@ def grow_tree(tm, rng, prm):
             for i in range(prm.get('tip_cards', 0)):
                 off = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-0.8, 0.6))).normalized() * rng.uniform(0.2, prm.get('tip_r', 0.7))
                 c = tip + off
-                if ray_ellipsoid_scale(c, Vector((0, 0, 1)), env_c, env_rx, env_rz) in (None, 0.0): continue
+                if not inside_ellipsoid(c, env_c, env_rx, env_rz, 1.04): continue
                 facing = Vector((c.x, c.y, (c.z - env_c.z) * env_rx / env_rz))
                 tm.crossed_cards(c, prm['card_size'] * rng.uniform(0.7, 1.1), rng, tilt=prm.get('card_tilt', 0.6), facing=facing)
 
@@ -510,10 +513,10 @@ def add_fruit(tm, rng, branches, n, hang=False):
     for i in range(n):
         pts, radii = tips[rng.randrange(len(tips))]
         p, d, r = point_on(pts, radii, rng.uniform(0.3, 1.0))
-        drop = rng.uniform(0.25, 0.8) if hang else rng.uniform(0.08, 0.2)
+        drop = rng.uniform(0.3, 0.9) if hang else rng.uniform(0.1, 0.25)
         c = p + Vector((0, 0, -drop))
         if hang: tm.tube([p, c + Vector((0, 0, 0.06))], [0.012, 0.01], seg=3, cap=False)
-        tm.sphere(c, 0.075, rng.random(), scale=(0.85, 0.85, 1.2), subdiv=1)
+        tm.sphere(c, 0.1, rng.random(), scale=(0.85, 0.85, 1.25), subdiv=1)
 
 def palm_leaf_material():
     m = leaf_material('MAT_PalmLeaflet', 'palm_leaflet.png', tint=(0.36, 0.52, 0.27, 1), translucency=0.2, rough=0.45, hue_var=0.04)

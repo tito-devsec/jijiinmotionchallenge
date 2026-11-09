@@ -23,10 +23,13 @@ def crop_city(objs, center, radius, keep=('CITY_WATER', 'CITY_TERRAIN', 'OCEAN_F
         bmesh.ops.delete(bm, geom=[bm.verts[i] for i in np.nonzero(far)[0]], context='VERTS')
         bm.to_mesh(me); bm.free(); me.update()
 
-def load_city(style='real', crop=None):
-    objs = P.link_city()
+def load_city(style='real', crop=None, future=False):
+    """future=True loads the 2040 skyscraper version (same footprints and roads) from city_future.blend."""
+    blend = os.path.join(P.ROOT, 'blender', 'city_future.blend' if future else 'city_base.blend')
+    names = ('CITY_BUILDING', 'CITY_ROAD', 'CITY_WATER', 'CITY_TERRAIN', 'CITY_TREE', 'CITY_PAVING', 'CITY_FURNITURE', 'CITY_RAIL') + (('CITY_CROWNS', 'CITY_SPIRES') if future else ())
+    objs = P.link_city(blend, names)
     if 'OCEAN_FAR' not in objs and bpy.data.objects.get('OCEAN_FAR'): objs['OCEAN_FAR'] = bpy.data.objects['OCEAN_FAR']
-    with bpy.data.libraries.load(os.path.join(P.ROOT, 'blender', 'city_base.blend'), link=False) as (src, dst):
+    with bpy.data.libraries.load(blend, link=False) as (src, dst):
         dst.objects = [n for n in src.objects if n == 'OCEAN_FAR']
     for o in dst.objects:
         if o: bpy.data.collections['CITY'].objects.link(o); objs['OCEAN_FAR'] = o
@@ -158,6 +161,7 @@ def apply_future_materials(objs):
     for i, s in enumerate(objs['CITY_BUILDING'].material_slots):
         s.material = roof if 'Roof' in (s.material.name if s.material else '') else wall
     for s in objs['CITY_ROAD'].material_slots: s.material = road
+    if 'CITY_CROWNS' in objs: objs['CITY_CROWNS'].material_slots[0].material = P.new_mat('MAT_Crown', (0.3, 0.5, 0.6, 1), 0.08, 0.9, coat=1.0)
 
 def enable_mist(start=200, depth=1500, color=(0.35, 0.5, 0.8, 1), strength=0.7):
     """Cheap atmospheric perspective: Mist pass mixed toward a haze colour in the compositor (no volumetrics)."""
