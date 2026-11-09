@@ -24,7 +24,9 @@ for k, (n, p) in enumerate(zip(nums, files)):
     nxt = nums[k + 1] if k + 1 < len(nums) else n + (nums[1] - nums[0] if len(nums) > 1 else 1)
     for fno in range(n, nxt): seq.append((fno, p))
 for fno, fp in seq:
-    im = Image.open(fp).convert('RGBA'); W, H = im.size; d = ImageDraw.Draw(im, 'RGBA')
+    im = Image.open(fp).convert('RGBA')
+    if im.size != (1280, 720): im = im.resize((1280, 720), Image.LANCZOS)  # UI is laid out for 1280x720
+    W, H = im.size; d = ImageDraw.Draw(im, 'RGBA')
     t = (fno - 1) / 24.0
     if mode == 'camera':
         # viewfinder: 16:9 safe frame corners, REC indicator with timer, focus reticle, exposure scale, mode strip
@@ -35,7 +37,6 @@ for fno, fp in seq:
         if blink: d.ellipse([m + 10, m + 26, m + 30, m + 46], fill=(230, 50, 40))
         mm, ss = divmod(int(t), 60); ff = int((t - int(t)) * 24)
         d.text((m + 42, m + 22), f"REC  {mm:02d}:{ss:02d}:{ff:02d}", font=font(26), fill=WHITE)
-        d.text((W - m - 170, m + 22), "4K  24", font=font(24), fill=WHITE)
         cx, cy = W // 2, H // 2; r = 46
         d.rectangle([cx - r, cy - r, cx + r, cy + r], outline=TURQ, width=2)
         d.text((cx + r + 10, cy - 14), "AF", font=font(20), fill=TURQ)
