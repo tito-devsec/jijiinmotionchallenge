@@ -478,9 +478,9 @@ def clear_trees_near(path_points, r=25):
 
 
 # ----------------------------------------------------------------- palette enforcement
-_PALETTE_EXEMPT = ('skin', 'eye', 'iris', 'pupil', 'sclera', 'teeth', 'tooth', 'lip', 'hair', 'brow', 'lash', 'leaves', 'leaf', 'bark', 'trunk', 'fruit', 'glyph_', 'screen')
+_PALETTE_EXEMPT = ('skin', 'eye', 'iris', 'pupil', 'sclera', 'teeth', 'tooth', 'lip', 'hair', 'afro', 'brow', 'lash', 'leaves', 'leaf', 'bark', 'trunk', 'fruit', 'glyph_', 'screen')
 
-def _snap(c):
+def _snap(c, neutral_sat=0.18):
     """Snap a linear RGB(A) colour to the nearest HOT 70 colourway, keeping its luminance."""
     import colorsys
     r, g, b = c[0], c[1], c[2]; a = c[3] if len(c) > 3 else 1.0
@@ -489,7 +489,7 @@ def _snap(c):
     mx, mn = max(r, g, b), min(r, g, b)
     sat = (mx - mn) / mx if mx > 0 else 0.0           # HSV saturation (robust for values near or above 1)
     h = colorsys.rgb_to_hsv(r / mx, g / mx, b / mx)[0] if mx > 0 else 0.0
-    if sat < 0.18 or mx - mn < 0.03:
+    if sat < neutral_sat or mx - mn < 0.03:
         night, silver = HOT70['night'], HOT70['silver']
         ln = 0.2126 * night[0] + 0.7152 * night[1] + 0.0722 * night[2]; ls = 0.2126 * silver[0] + 0.7152 * silver[1] + 0.0722 * silver[2]
         t = max(0.0, min(1.0, (lum - ln) / (ls - ln))); base = tuple(night[i] * (1 - t) + silver[i] * t for i in range(3))
@@ -526,7 +526,7 @@ def enforce_palette(scene=None):
         if m.use_nodes and not any(x in m.name.lower() for x in _PALETTE_EXEMPT): n += _snap_tree(m.node_tree)
     if scene.world and scene.world.use_nodes: n += _snap_tree(scene.world.node_tree)
     for l in bpy.data.lights:
-        l.color = _snap(tuple(l.color)); n += 1
+        l.color = _snap(tuple(l.color), neutral_sat=0.4); n += 1   # warm-white key lights stay neutral so skin reads naturally
         if l.use_nodes and l.node_tree: n += _snap_tree(l.node_tree)
     if scene.use_nodes and scene.node_tree:   # compositor: only the haze colour of the mist mix, never grading controls
         for nd in scene.node_tree.nodes:
