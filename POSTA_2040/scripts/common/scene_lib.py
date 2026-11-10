@@ -403,9 +403,9 @@ def world_bluehour(sun_energy=0.25, strength=0.6):
     nt.links.new(sep.outputs['Z'], mr.inputs['Value'])
     ramp = nt.nodes.new('ShaderNodeValToRGB'); el = ramp.color_ramp.elements
     H = P.HOT70   # horizon Thermo Orange glow -> Quiet Violet band -> Dive Blue -> Night Pulse zenith
-    el[0].position = 0.0; el[0].color = tuple(c * 0.55 for c in H['thermo'][:3]) + (1,)
+    el[0].position = 0.0; el[0].color = tuple(c * 0.5 for c in H['violet'][:3]) + (1,)
     el[1].position = 1.0; el[1].color = tuple(c * 0.6 for c in H['night'][:3]) + (1,)
-    e = el.new(0.1); e.color = tuple(c * 0.35 for c in H['violet'][:3]) + (1,)
+    e = el.new(0.1); e.color = tuple(c * 0.7 for c in H['dive'][:3]) + (1,)
     e = el.new(0.35); e.color = tuple(c * 0.45 for c in H['dive'][:3]) + (1,)
     nt.links.new(mr.outputs['Result'], ramp.inputs[0]); nt.links.new(ramp.outputs[0], bg.inputs['Color']); bg.inputs['Strength'].default_value = strength
     nt.links.new(bg.outputs[0], out.inputs[0])
@@ -415,20 +415,60 @@ def world_bluehour(sun_energy=0.25, strength=0.6):
     sun.data.energy = sun_energy; sun.data.color = (0.55, 0.65, 1.0); sun.rotation_euler = (math.radians(55), 0, math.radians(60))
     return sun
 
+def facade_night_material(name='MAT_Wall2040'):
+    """Renovated 2040 facade at night (assets/references/city_2040): dark Dive Blue glass, a fine grid of small lit windows
+    (most blue, some silver), a bright outline at the top of every tier, facades brighter toward the top.
+    Uses the per-vertex attributes 'hn' (height within tier) written by build_future_city.py."""
+    H = P.HOT70
+    m = P.new_mat(name, tuple(c * 0.22 for c in H['dive'][:3]) + (1,), 0.12, 0.9, coat=0.6); nt = m.node_tree; b = nt.nodes['Principled BSDF']
+    N = nt.nodes.new; L = nt.links.new
+    def math_(op, a=None, b_=None, v1=None, v2=None):
+        n = N('ShaderNodeMath'); n.operation = op
+        if a is not None: L(a, n.inputs[0])
+        if b_ is not None: L(b_, n.inputs[1])
+        if v1 is not None: n.inputs[0].default_value = v1
+        if v2 is not None: n.inputs[1].default_value = v2
+        return n.outputs[0]
+    tc = N('ShaderNodeTexCoord'); sep = N('ShaderNodeSeparateXYZ'); L(tc.outputs['Object'], sep.inputs[0])
+    BAY, FLOOR = 1.5, 3.3
+    u = math_('ADD', sep.outputs['X'], math_('MULTIPLY', sep.outputs['Y'], v2=0.618))      # runs along a wall of any orientation
+    uc = math_('DIVIDE', u, v2=BAY); zc = math_('DIVIDE', sep.outputs['Z'], v2=FLOOR)
+    fu = math_('FRACT', uc); fz = math_('FRACT', zc)
+    win = math_('MULTIPLY', math_('MULTIPLY', math_('GREATER_THAN', fu, v2=0.22), math_('LESS_THAN', fu, v2=0.80)),
+                math_('MULTIPLY', math_('GREATER_THAN', fz, v2=0.30), math_('LESS_THAN', fz, v2=0.78)))
+    cell = N('ShaderNodeCombineXYZ'); L(math_('FLOOR', uc), cell.inputs[0]); L(math_('FLOOR', zc), cell.inputs[1])
+    wn = N('ShaderNodeTexWhiteNoise'); wn.noise_dimensions = '3D'; L(cell.outputs[0], wn.inputs['Vector'])
+    lit = math_('GREATER_THAN', wn.outputs['Value'], v2=0.50)
+    # whole floors that are dark / fully lit, like real towers at night
+    fl = N('ShaderNodeTexWhiteNoise'); fl.noise_dimensions = '1D'; L(math_('FLOOR', zc), fl.inputs['W'])
+    floor_on = math_('GREATER_THAN', fl.outputs['Value'], v2=0.18)
+    hn = N('ShaderNodeAttribute'); hn.attribute_name = 'hn'
+    grad = math_('MULTIPLY_ADD', hn.outputs['Fac'], v2=0.9); nt.nodes[-1].inputs[2].default_value = 0.55
+    wl = math_('MULTIPLY', math_('MULTIPLY', math_('MULTIPLY', win, lit), floor_on), grad)
+    wl = math_('MULTIPLY', wl, v2=3.2)
+    rim = math_('MULTIPLY', math_('GREATER_THAN', hn.outputs['Fac'], v2=0.972), v2=9.0)        # glowing outline at each tier top
+    band = math_('MULTIPLY', math_('LESS_THAN', math_('FRACT', math_('DIVIDE', zc, v2=14.0)), v2=0.02), v2=3.0)  # service-floor light bands
+    tot = math_('ADD', math_('ADD', wl, rim), band)
+    ramp = N('ShaderNodeValToRGB'); ramp.color_ramp.interpolation = 'CONSTANT'
+    ramp.color_ramp.elements[0].color = (0.16, 0.36, 1.0, 1); ramp.color_ramp.elements[1].position = 0.78; ramp.color_ramp.elements[1].color = H['silver']
+    L(wn.outputs['Color'], ramp.inputs[0])
+    mixc = N('ShaderNodeMix'); mixc.data_type = 'RGBA'; L(math_('GREATER_THAN', hn.outputs['Fac'], v2=0.972), mixc.inputs['Factor'])
+    L(ramp.outputs[0], mixc.inputs['A']); mixc.inputs['B'].default_value = (0.45, 0.62, 1.0, 1)
+    L(mixc.outputs['Result'], b.inputs['Emission Color']); L(tot, b.inputs['Emission Strength'])
+    return m
+
 def apply_bluehour_city(objs):
-    """Realistic 2040 city at blue hour (future_city_bluehour.webp): dark glass towers with many warm and cool lit windows,
-    gold-lit crowns, glowing spires, sodium-orange street light along the real roads."""
-    apply_future_materials(objs)
-    w = bpy.data.materials['MAT_Wall2040']; nt = w.node_tree
-    for n in nt.nodes:
-        if n.type == 'MATH' and n.operation == 'GREATER_THAN' and abs(n.inputs[1].default_value - 0.94) < 1e-3: n.inputs[1].default_value = 0.84
-        if n.type == 'MATH' and n.operation == 'MULTIPLY' and abs(n.inputs[1].default_value - 0.25) < 1e-3: n.inputs[1].default_value = 1.8
-    b = nt.nodes['Principled BSDF']; b.inputs['Emission Color'].default_value = P.HOT70['thermo']
-    crown = P.new_mat('MAT_Crown', tuple(c * 0.5 for c in P.HOT70['dive'][:3]) + (1,), 0.08, 0.9, emission=P.HOT70['thermo'], estrength=0.18, coat=1.0)
-    if 'CITY_CROWNS' in objs: objs['CITY_CROWNS'].material_slots[0].material = crown
-    if 'CITY_SPIRES' in objs: objs['CITY_SPIRES'].material_slots[0].material = P.new_mat('MAT_Spire', (0.8, 0.8, 0.8, 1), 0.3, 1.0, emission=P.HOT70['silver'], estrength=1.6)
-    r = bpy.data.materials['MAT_Road2040']; rb = r.node_tree.nodes['Principled BSDF']; rb.inputs['Emission Color'].default_value = P.HOT70['thermo']
-    for n in r.node_tree.nodes:
+    """Realistic renovated Posta 2040 at night: same footprints, blue glass towers with fine lit windows and glowing tier
+    outlines, silver spires, Thermo Orange guidance light along the real roads."""
+    H = P.HOT70
+    wall = facade_night_material(); roof = P.new_mat('MAT_Roof2040', tuple(c * 0.12 for c in H['dive'][:3]) + (1,), 0.3, 0.8)
+    for sl in objs['CITY_BUILDING'].material_slots:
+        sl.material = roof if 'Roof' in (sl.material.name if sl.material else '') else wall
+    road = road_lane_material()
+    for sl in objs['CITY_ROAD'].material_slots: sl.material = road
+    if 'CITY_SPIRES' in objs: objs['CITY_SPIRES'].material_slots[0].material = P.new_mat('MAT_Spire', H['silver'], 0.3, 1.0, emission=(0.6, 0.75, 1.0, 1), estrength=3.0)
+    rb = road.node_tree.nodes['Principled BSDF']; rb.inputs['Emission Color'].default_value = H['thermo']
+    for n in road.node_tree.nodes:
         if n.type == 'MATH' and n.operation == 'MULTIPLY': n.inputs[1].default_value = 0.9
         if n.type == 'VALTORGB': n.color_ramp.elements[0].position = 0.9; n.color_ramp.elements[1].position = 0.97
 

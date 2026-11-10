@@ -1,53 +1,60 @@
-"""Futurise Posta: every building keeps its real footprint but grows into a 2040 tower.
-Per building (obj_id island): vertical scale k driven by distance to the CBD, footprint area and a seeded random;
-tall towers get a tapered crown, a spire and a beacon. Roads, water, terrain are untouched. Output: blender/city_future.blend
-with CITY_BUILDING replaced by the 2040 version (plus CITY_CROWNS and CITY_SPIRES meshes)."""
-import bpy, os, sys, numpy as np, bmesh, math, random
+"""Posta 2040 — the SAME buildings, renovated. Every building keeps its real OSM footprint and position; roads, water and
+terrain are untouched. Renovation = added height (more in the CBD), stepped glass tiers on the tall ones that follow the
+footprint shape, and slim antenna spires. Look reference: assets/references/city_2040 (dense blue night skylines, fine lit
+window grids, glowing tier outlines). No invented caps or canopies.
+Per-vertex attributes written for the facade shader: 'hn' (0..1 height within its tier) and 'bh' (building height, m).
+Output: blender/city_future.blend"""
+import bpy, os, sys, numpy as np, bmesh, math
+from mathutils import Matrix
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.insert(0, os.path.join(ROOT, 'scripts', 'common')); import posta_lib as P
-CBD = (-180.0, 230.0); R_CBD = 520.0; MAXH = 330.0
+CBD = (-180.0, 230.0); R_CBD = 520.0; MAXH = 300.0
 bpy.ops.wm.open_mainfile(filepath=os.path.join(ROOT, 'blender', 'city_base.blend'))
 o = bpy.data.objects['CITY_BUILDING']; me = o.data
-n = len(me.vertices); co = np.empty(n * 3); me.vertices.foreach_get('co', co); co = co.reshape(-1, 3)
-ids = np.empty(n, dtype=np.int32); me.attributes['obj_id'].data.foreach_get('value', ids)
-rnd_all = np.empty(n); me.attributes['obj_rand'].data.foreach_get('value', rnd_all)
-uniq = np.unique(ids); print('buildings', len(uniq))
-crowns = []; spires = []
-rng = np.random.default_rng(2040)
-for b in uniq:
-    m = ids == b; pts = co[m]
-    zmin, zmax = pts[:, 2].min(), pts[:, 2].max(); h = zmax - zmin
-    if h < 2.5: continue
-    cx, cy = pts[:, 0].mean(), pts[:, 1].mean(); r = rnd_all[m][0]
-    area = (pts[:, 0].max() - pts[:, 0].min()) * (pts[:, 1].max() - pts[:, 1].min())
+bm = bmesh.new(); bm.from_mesh(me)
+lid = bm.verts.layers.int['obj_id']; lrnd = bm.verts.layers.float['obj_rand']
+lhn = bm.verts.layers.float.new('hn'); lbh = bm.verts.layers.float.new('bh')
+groups = {}
+for f in bm.faces: groups.setdefault(f.verts[0][lid], []).append(f)
+print('buildings', len(groups))
+spires = []; tiers = 0
+for b, faces in groups.items():
+    verts = {v for f in faces for v in f.verts}
+    zs = [v.co.z for v in verts]; zmin, zmax = min(zs), max(zs); h = zmax - zmin
+    xs = [v.co.x for v in verts]; ys = [v.co.y for v in verts]
+    cx, cy = sum(xs) / len(xs), sum(ys) / len(ys); r = next(iter(verts))[lrnd]
+    if h < 2.5:
+        for v in verts: v[lhn] = 0.0; v[lbh] = h
+        continue
+    area = (max(xs) - min(xs)) * (max(ys) - min(ys))
     d = math.hypot(cx - CBD[0], cy - CBD[1]); cbd = max(0.0, 1.0 - d / R_CBD)
-    k = 1.15 + 0.9 * r + cbd * (1.5 + 3.5 * r) * (1.0 if area > 150 else 0.4)
-    if area > 900 and cbd > 0.3: k *= 1.3
+    k = 1.15 + 0.9 * r + cbd * (1.5 + 3.2 * r) * (1.0 if area > 150 else 0.4)
+    if area > 900 and cbd > 0.3: k *= 1.25
     H = min(h * k, MAXH); k = H / h
-    co[m, 2] = zmin + (pts[:, 2] - zmin) * k
-    if H > 70 and area > 200:
-        bx0, bx1, by0, by1 = pts[:, 0].min(), pts[:, 0].max(), pts[:, 1].min(), pts[:, 1].max()
-        crowns.append((cx, cy, zmin + H, (bx1 - bx0) * 0.6, (by1 - by0) * 0.6, H * (0.08 + 0.08 * r), r))
-        if r > 0.35: spires.append((cx, cy, zmin + H + H * (0.08 + 0.08 * r), H * (0.12 + 0.12 * r), r))
-me.vertices.foreach_set('co', co.ravel()); me.update()
-print('crowns', len(crowns), 'spires', len(spires), 'max z', co[:, 2].max().round(1))
-# crowns: tapered boxes (glass), spires: thin tapered cylinders with beacon spheres
-def make_mesh(name, build):
-    bm = bmesh.new(); build(bm); mesh = bpy.data.meshes.new(name); bm.to_mesh(mesh); bm.free(); ob = bpy.data.objects.new(name, mesh); bpy.data.collections['CITY'].objects.link(ob); return ob
-def build_crowns(bm):
-    for cx, cy, z, sx, sy, hz, r in crowns:
-        verts = bmesh.ops.create_cube(bm, size=1.0)['verts']
-        taper = 0.55 + 0.3 * r
-        for v in verts:
-            s = taper if v.co.z > 0 else 1.0
-            v.co = (cx + v.co.x * sx * s, cy + v.co.y * sy * s, z + (v.co.z + 0.5) * hz)
-def build_spires(bm):
-    for cx, cy, z, hz, r in spires:
-        bmesh.ops.create_cone(bm, cap_ends=True, segments=8, radius1=0.9 + r, radius2=0.15, depth=hz, matrix=__import__('mathutils').Matrix.Translation((cx, cy, z + hz / 2)))
-        bmesh.ops.create_icosphere(bm, subdivisions=1, radius=0.8, matrix=__import__('mathutils').Matrix.Translation((cx, cy, z + hz + 0.5)))
-cr = make_mesh('CITY_CROWNS', build_crowns); sp = make_mesh('CITY_SPIRES', build_spires)
-for ob in (cr, sp):
-    for p in ob.data.polygons: p.use_smooth = False
-cr.data.materials.append(P.new_mat('MAT_Crown', (0.3, 0.5, 0.6, 1), 0.08, 0.9, coat=1.0))
-sp.data.materials.append(P.new_mat('MAT_Spire', (0.7, 0.72, 0.75, 1), 0.3, 1.0, emission=P.PAL['turq'], estrength=1.5))
+    for v in verts:
+        v.co.z = zmin + (v.co.z - zmin) * k; v[lhn] = (v.co.z - zmin) / H; v[lbh] = H
+    top = zmin + H
+    # stepped glass tiers that repeat the footprint, smaller each time (renovation add-ons, same plan shape)
+    plan = []
+    if H > 60 and area > 180: plan.append((0.70, 0.28))
+    if H > 120 and area > 250: plan.append((0.46, 0.20))
+    if H > 190: plan.append((0.26, 0.14))
+    base = top
+    for s, frac in plan:
+        dup = bmesh.ops.duplicate(bm, geom=faces)['geom']; nv = [e for e in dup if isinstance(e, bmesh.types.BMVert)]
+        th = H * frac
+        for v in nv:
+            t = v[lhn]
+            v.co.x = cx + (v.co.x - cx) * s; v.co.y = cy + (v.co.y - cy) * s; v.co.z = base + t * th; v[lhn] = t; v[lbh] = H
+        base += th; tiers += 1
+    if H > 90 and r > 0.3: spires.append((cx, cy, base, H * (0.10 + 0.14 * r), 0.5 + 0.8 * r))
+bm.to_mesh(me); bm.free(); me.update()
+co = np.empty(len(me.vertices) * 3); me.vertices.foreach_get('co', co)
+print('tiers', tiers, 'spires', len(spires), 'max z', co.reshape(-1, 3)[:, 2].max().round(1))
+sb = bmesh.new()
+for cx, cy, z, hz, rad in spires:
+    bmesh.ops.create_cone(sb, cap_ends=True, segments=6, radius1=rad, radius2=0.08, depth=hz, matrix=Matrix.Translation((cx, cy, z + hz / 2)))
+sm = bpy.data.meshes.new('CITY_SPIRES'); sb.to_mesh(sm); sb.free()
+sp = bpy.data.objects.new('CITY_SPIRES', sm); bpy.data.collections['CITY'].objects.link(sp)
+sm.materials.append(P.new_mat('MAT_Spire', P.HOT70['silver'], 0.3, 1.0, emission=P.HOT70['silver'], estrength=2.0))
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(ROOT, 'blender', 'city_future.blend'), compress=True); print('saved city_future.blend')

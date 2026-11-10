@@ -14,7 +14,7 @@ def run(cmd): print(' '.join(cmd) if isinstance(cmd, list) else cmd); subprocess
 
 clips = []
 # title cards (pre-rendered at 24 fps by brand_cards.py) bracket the film
-cards = [{'id': 'card_open', 'title': 'Opening card', 'frames': 72}] + cfg['scenes'] + [{'id': 'card_close', 'title': 'Closing card', 'frames': 120}]
+cards = [{'id': 'card_open', 'title': 'Opening card', 'frames': 72}] + cfg['scenes']   # film ends on the brand reveal (no closing card)
 for s in cards:
     base = s['id'] if s['id'].startswith('card') else s['id'] + SUF
     d = os.path.join(R, base)
