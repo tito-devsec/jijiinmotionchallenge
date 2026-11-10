@@ -21,6 +21,14 @@ API:
   make_swim_pose_cycle(arm, start, end, kick_frames=36)
   make_seated_pose(arm, frame, seat_height=0.45)
   make_cyclic(arm)                                 add Cycles F-modifiers to every f-curve
+
+Finger helpers (rigs built since the MakeHuman rebuild carry 15 finger bones per hand, children of hand.L/R:
+thumb/index/middle/ring/pinky + .01/.02/.03 + .L/.R, local +X rotation = flexion; all helpers silently do nothing
+on rigs without finger bones, so older assets keep working):
+  curl_fingers(arm, side, amount, frame=None, thumb=None, spread=0.0, fingers=None)   0 = rest, 1 = fist
+  set_finger(arm, side, finger, a1, a2, a3, frame=None, spread=0.0)                    explicit joint angles (deg)
+  make_two_hand_phone_pose(arm, frame, width=0.168, chest_drop=0.22, forward=0.30, tilt=38)   both hands on a landscape phone
+  two_hand_phone_matrix(arm)                       4x4 (armature space) where the phone sits in that pose
 """
 import math
 import bpy
@@ -125,6 +133,9 @@ def make_walk_cycle(armature, start_frame, end_frame, stride_frames=24, travel=0
         set_rot(arm, 'chest', rx=2, rz=-5 * s, frame=f)
         set_rot(arm, 'neck', rx=-2, frame=f)
         set_rot(arm, 'head', rx=-3, rz=2 * s, ry=-1.5 * s, frame=f)
+    for sd in ('L', 'R'):                     # relaxed, slightly curled hands while walking
+        for f in (int(start_frame), int(end_frame)):
+            curl_fingers(arm, sd, 0.22, frame=f, thumb=0.15)
     return arm
 
 
@@ -149,8 +160,168 @@ def make_idle(armature, start, end, period=72):
     return arm
 
 
+FINGERS = ('thumb', 'index', 'middle', 'ring', 'pinky')
+_CURL_MAX = {'thumb': (22.0, 38.0, 60.0), 'index': (82.0, 100.0, 68.0), 'middle': (85.0, 102.0, 70.0),
+             'ring': (88.0, 104.0, 70.0), 'pinky': (90.0, 104.0, 70.0)}
+
+
+def has_fingers(arm, side='R'):
+    return ('index.01.%s' % side.upper()) in arm.pose.bones
+
+
+def set_finger(arm, side, finger, a1=0.0, a2=0.0, a3=0.0, frame=None, spread=0.0):
+    """Flex the three joints of one finger (degrees about the bone's local X = toward the palm);
+    spread (deg) fans the first joint sideways about its local Z."""
+    for i, a in enumerate((a1, a2, a3), 1):
+        pb = arm.pose.bones.get('%s.0%d.%s' % (finger, i, side.upper()))
+        if pb is None:
+            return False
+        pb.rotation_mode = 'QUATERNION'
+        q = Quaternion((1, 0, 0), math.radians(a))
+        if i == 1 and abs(spread) > 1e-6:
+            q = Quaternion((0, 0, 1), math.radians(spread)) @ q
+        pb.rotation_quaternion = q
+        if frame is not None:
+            pb.keyframe_insert('rotation_quaternion', frame=frame)
+    return True
+
+
+def curl_fingers(arm, side, amount, frame=None, thumb=None, spread=0.0, fingers=None):
+    """Curl the fingers of one hand: amount 0 = relaxed rest pose, 1 = closed fist.  'thumb' (default = amount)
+    curls the thumb separately; 'fingers' restricts the call to some of thumb/index/middle/ring/pinky.
+    Does nothing (returns False) on rigs without finger bones."""
+    if not has_fingers(arm, side):
+        return False
+    for k, fn in enumerate(FINGERS):
+        if fingers is not None and fn not in fingers:
+            continue
+        a = (amount if thumb is None else thumb) if fn == 'thumb' else amount
+        m = _CURL_MAX[fn]
+        sp = 0.0 if fn == 'thumb' else spread * (1.5 - k) * 0.5
+        set_finger(arm, side, fn, m[0] * a, m[1] * a, m[2] * a, frame=frame, spread=sp)
+    return True
+
+
+def _update():
+    bpy.context.view_layer.update()
+
+
+def _palm(arm, side):
+    """Palm centre (armature space) of the posed hand: 45 % along the hand bone."""
+    pb = arm.pose.bones['hand.%s' % side]
+    return pb.head + (pb.tail - pb.head) * 0.45
+
+
+_PHONE_GRIP = (0.010, 0.032, -0.016)   # palm centre relative to the phone's short-edge midpoint: along X (outward), Y (behind the back), Z
+
+
+def _palm_normal(arm, side):
+    """Unit palm normal of the posed hand (armature space)."""
+    sg = -1.0 if side == 'L' else 1.0
+    hd = arm.pose.bones['hand.%s' % side]
+    ib = arm.pose.bones.get('index.01.%s' % side)
+    if ib is not None:
+        n = ib.bone.matrix_local.to_3x3() @ Vector((0, 0, 1))             # rest palm normal (finger roll axis)
+    else:
+        n = Vector((-sg, 0, 0))
+    n = hd.matrix.to_3x3() @ (hd.bone.matrix_local.to_3x3().inverted() @ n)
+    d = (hd.tail - hd.head).normalized()
+    return (n - d * n.dot(d)).normalized()
+
+
+def two_hand_phone_matrix(arm):
+    """Where a landscape phone sits between the hands after make_two_hand_phone_pose, as a 4x4 in ARMATURE space
+    (multiply by rig.matrix_world for world space):
+      origin   = phone centre: midpoint of the two palm centres (45 % along hand.L / hand.R) moved 32 mm toward
+                 the holder (the palms lie on the phone's back) and 16 mm up,
+      +X       = from the left hand to the right hand  -> the phone's long side (168 mm),
+      +Z       = up along the phone's short side (79 mm),
+      +Y       = out of the BACK of the phone, away from the holder; the screen faces -Y, toward the face."""
+    from mathutils import Matrix
+    _update()
+    pl, pr = _palm(arm, 'L'), _palm(arm, 'R')
+    x = (pr - pl).normalized()
+    n = _palm_normal(arm, 'L') + _palm_normal(arm, 'R')                   # palms press on the back -> they face -Y
+    y = -(n - x * n.dot(x)).normalized()
+    z = x.cross(y).normalized()
+    m = Matrix((x, y, z)).transposed().to_4x4()
+    m.translation = (pl + pr) * 0.5 - y * _PHONE_GRIP[1] - z * _PHONE_GRIP[2]
+    return m
+
+
+def _aim_bone(arm, name, direction):
+    """Rotate a pose bone about its head (shortest arc) so that it points along 'direction' (armature space)."""
+    from mathutils import Matrix
+    pb = arm.pose.bones[name]
+    pb.rotation_mode = 'QUATERNION'
+    cur = (pb.tail - pb.head).normalized()
+    q = cur.rotation_difference(Vector(direction).normalized()).to_matrix().to_4x4()
+    pb.matrix = Matrix.Translation(pb.head) @ q @ Matrix.Translation(-pb.head) @ pb.matrix
+    pb.location = (0, 0, 0)
+    _update()
+    return pb
+
+
+def make_two_hand_phone_pose(armature, frame, width=0.168, chest_drop=0.22, forward=0.30, tilt=38.0):
+    """Both hands hold a phone in landscape in front of the chest (client reference two_hands_landscape_phone):
+    forearms raised, a hand on each short edge ('width' apart), fingers flat across the back of the phone,
+    thumbs wrapped round onto the front bezel.  chest_drop = how far below the shoulders the phone centre sits,
+    forward = how far in front of the shoulders (metres), tilt = how far the screen leans back toward the face
+    (degrees from vertical).  The arms are solved with a two-bone IK on the rig, so it works for every body
+    size; place the phone with two_hand_phone_matrix(rig)."""
+    from mathutils import Matrix
+    arm = armature
+    f = frame
+    set_rot(arm, 'chest', rx=3, frame=f)
+    set_rot(arm, 'neck', rx=10, frame=f)
+    set_rot(arm, 'head', rx=16, frame=f)
+    for sd in ('L', 'R'):
+        for b in ('upper_arm', 'forearm', 'hand'):
+            pb = arm.pose.bones['%s.%s' % (b, sd)]
+            pb.rotation_mode = 'QUATERNION'; pb.rotation_quaternion = Quaternion(); pb.location = (0, 0, 0)
+    _update()
+    sl, sr = arm.pose.bones['upper_arm.L'].head.copy(), arm.pose.bones['upper_arm.R'].head.copy()
+    a = math.radians(tilt)
+    x = Vector((1, 0, 0)); y = Vector((0, math.cos(a), -math.sin(a))); z = x.cross(y)
+    c = (sl + sr) * 0.5 + Vector((0, forward, -chest_drop))
+    for sd, sg, sh in (('L', -1.0, sl), ('R', 1.0, sr)):
+        ua, fa, hd = (arm.pose.bones['%s.%s' % (b, sd)] for b in ('upper_arm', 'forearm', 'hand'))
+        # fingers lie across the back of the phone pointing inward and a little up; the palm presses on the back,
+        # the short edge sits in the crook between thumb and index, the thumb comes round onto the front bezel
+        d_hand = (x * (-0.74 * sg) + y * 0.20 + z * 0.56).normalized()
+        palm = c + x * sg * (width * 0.5 + _PHONE_GRIP[0]) + y * _PHONE_GRIP[1] + z * _PHONE_GRIP[2]
+        wrist = palm - d_hand * (hd.length * 0.45)
+        # two-bone IK: elbow below / outside the shoulder-wrist line
+        l1, l2 = ua.length, fa.length
+        v = wrist - sh; dist = min(v.length, (l1 + l2) * 0.999); vd = v.normalized()
+        cos_a = max(-1.0, min(1.0, (l1 * l1 + dist * dist - l2 * l2) / (2 * l1 * dist)))
+        pole = Vector((0.75 * sg, -0.35, -1.0)); pole = (pole - vd * pole.dot(vd)).normalized()
+        elbow = sh + vd * (l1 * cos_a) + pole * (l1 * math.sqrt(max(0.0, 1 - cos_a * cos_a)))
+        _aim_bone(arm, 'upper_arm.%s' % sd, elbow - sh)
+        _aim_bone(arm, 'forearm.%s' % sd, wrist - fa.head)
+        # hand: fingers along d_hand, palm facing the phone edge
+        n1 = -y; n1 = (n1 - d_hand * n1.dot(d_hand)).normalized()
+        d0 = (hd.tail - hd.head).normalized()
+        n0 = _palm_normal(arm, sd)
+        f0 = Matrix((d0, n0, d0.cross(n0))).transposed(); f1 = Matrix((d_hand, n1, d_hand.cross(n1))).transposed()
+        r = (f1 @ f0.inverted()).to_4x4()
+        hd.rotation_mode = 'QUATERNION'
+        hd.matrix = Matrix.Translation(hd.head) @ r @ Matrix.Translation(-hd.head) @ hd.matrix
+        hd.location = (0, 0, 0)
+        _update()
+        for pb in (ua, fa, hd):
+            pb.keyframe_insert('rotation_quaternion', frame=f)
+        # fingers wrap behind the phone, thumb rests on the front bezel
+        for fn, (a1, a2, a3) in (('index', (-14, -4, 0)), ('middle', (-12, -2, 0)), ('ring', (-10, 0, 2)), ('pinky', (-8, 2, 4))):
+            set_finger(arm, sd, fn, a1, a2, a3, frame=f)
+        set_finger(arm, sd, 'thumb', 30, 24, 26, frame=f)
+    _update()
+    return arm
+
+
 def make_hold_phone_pose(armature, frame, side='R'):
-    """Right (default) hand raised to chest height in front of the body, as if filming with a phone."""
+    """Right (default) hand raised to chest height in front of the body, as if filming with a phone.
+    On rigs with finger bones the hand also grips (fingers curled, thumb closing)."""
     arm = armature
     o = side.upper()
     other = 'L' if o == 'R' else 'R'
@@ -158,6 +329,8 @@ def make_hold_phone_pose(armature, frame, side='R'):
     set_rot(arm, f'upper_arm.{o}', rx=28, ry=22 * inward, frame=frame)
     set_rot(arm, f'forearm.{o}', rx=98, ry=12 * inward, frame=frame)
     set_rot(arm, f'hand.{o}', rx=25, rz=-15 * inward, frame=frame)
+    curl_fingers(arm, o, 0.42, frame=frame, thumb=0.35)
+    curl_fingers(arm, other, 0.08, frame=frame)
     set_rot(arm, f'upper_arm.{other}', rx=4, ry=-5 * inward, frame=frame)
     set_rot(arm, f'forearm.{other}', rx=12, frame=frame)
     set_rot(arm, 'chest', rx=2, rz=4 * inward, frame=frame)
@@ -171,6 +344,9 @@ def make_swim_pose_cycle(armature, start, end, kick_frames=36):
     """Horizontal swimming (face down, head toward +Y) with alternating flutter kicks.
     The root empty stays at the feet centre; hips are lifted to ~1.0 m so the body floats around z=1."""
     arm = armature
+    for f in (int(start), int(end)):          # right hand grips the torch, left hand relaxed-open
+        curl_fingers(arm, 'R', 0.72, frame=f, thumb=0.5)
+        curl_fingers(arm, 'L', 0.12, frame=f)
     for f in range(int(start), int(end) + 1):
         ph = 2 * math.pi * (f - start) / float(kick_frames)
         s = math.sin(ph)
