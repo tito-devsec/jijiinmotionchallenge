@@ -1,5 +1,5 @@
 """SCENE 06 — Posta 2040 as a realistic futuristic civilisation. Binary architecture resolves into real materials (progress 1->0),
-then a low aerial glide along Kivukoni Front. Vehicles are added when the roadster asset is present."""
+with a street-level pass (roadster, robot, residents) that lifts into an aerial glide along Kivukoni Front."""
 import bpy, os, sys, math
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'common'))
 import posta_lib as P, scene_lib as S
@@ -34,8 +34,29 @@ def build(scn, quality):
     r = objs['CITY_ROAD']; mr = P.apply_binary(r, progress=1.0, density=0.3, size=1.0, noise_scale=0.006, seed=11, height_bias=0.0, band=0.25)
     S.key_progress(mr, [(1, 1.0), (int(F * 0.4), 0.0), (F, 0.0)]); S.drive_flow(mr, speed=2.0); S.binary_off_after(mr, int(F * 0.4) + 2)
     add_vehicles(F)
+    # street-level hero pass on the waterfront road: the roadster drives by while the robot and a resident walk the pavement
+    import character_anim as CA
+    (px, py, pz), (dx, dy) = S.road_frame(70, 40); nx, ny = -dy, dx; head = math.atan2(dy, dx) - math.pi / 2
+    g = lambda a, b=0.0: (px + dx * a + nx * b, py + dy * a + ny * b, P.ground_z(px + dx * a + nx * b, py + dy * a + ny * b) + 0.05)
+    car = S.instance_collection(bpy.data.collections['ROADSTER'], 'CAR_HERO', loc=g(-90, 1.6), rot=(0, 0, head))
+    for f, a in ((1, -90), (int(F * 0.3), -40), (int(F * 0.62), 18), (F, 120)):
+        car.location = g(a, 1.6); car.keyframe_insert('location', frame=f)
+    for fc in car.animation_data.action.fcurves:
+        for kp in fc.keyframe_points: kp.interpolation = 'LINEAR'
+    walk = 1.3 / 24.0
+    for i, (nm, a0, side) in enumerate((('ROBOT', 4.0, 5.2), ('CIVILIAN_C', 7.5, 6.0), ('HERO', -3.0, 5.6))):
+        try:
+            col, rig = S.add_character(nm, loc=g(a0, side), heading=head)
+            CA.make_walk_cycle(rig, 1, F, stride_frames=24 + 2 * i)
+            P.key(rig, 1, loc=g(a0, side)); P.key(rig, F, loc=g(a0 + walk * F, side), interp='LINEAR')
+        except Exception as e: print('character skipped', nm, e)
+    import tree_lib; tree_lib.clear_real_trees_near([g(a, 4) for a in range(-20, 40, 10)], 9)
     S.world_bluehour(sun_energy=0.3, strength=0.55)
     S.enable_mist(start=350, depth=2600, color=(0.1, 0.1, 0.2, 1), strength=0.35)
-    cam = P.add_camera(loc=(-120, -120, 60), target=(-30, 100, 25), lens=35)
-    S.cam_path(cam, [(1, (-120, -120, 60)), (F, (220, -160, 90))], [(1, (-30, 100, 25)), (F, (60, 90, 20))])
+    # camera: low beside the road as the city resolves and the roadster passes, then lifts over the waterfront
+    c0 = g(22, -4.5); c0 = (c0[0], c0[1], c0[2] + 1.4); c1 = g(30, -7); c1 = (c1[0], c1[1], c1[2] + 3.0)
+    t0 = g(-30, 3); t1 = g(10, 3)
+    cam = P.add_camera(loc=c0, target=(t0[0], t0[1], t0[2] + 12), lens=28)
+    S.cam_path(cam, [(1, c0), (int(F * 0.62), c1), (F, (220, -160, 90))],
+               [(1, (t0[0], t0[1], t0[2] + 14)), (int(F * 0.62), (t1[0], t1[1], t1[2] + 1.5)), (F, (-60, 150, 40))])
     P.setup_render(samples=28, frame_end=F); S.frame_range(scn)
