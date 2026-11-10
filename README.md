@@ -17,6 +17,11 @@ the edit is assembled with FFmpeg.
 > digital civilisation → realistic 2040 Tanzania, captured on an Infinix HOT 70. Blender Geometry Nodes,
 > Python, GLSL, procedural audio, FFmpeg. © tito-devsec. Code GPL-3.0, film and assets All Rights Reserved.
 
+## Watch the film
+
+- **Final film:** `POSTA_2040/renders/JIJI_IN_MOTION_final.mp4` — 2 min 02 s, 1280×720, 24 fps, H.264 + AAC stereo.
+- Per-scene clips: `POSTA_2040/renders/clips/` · frame contact sheet: `POSTA_2040/previews/final_contact_sheet.png`.
+
 ## Story (14 scenes)
 
 | # | Scene | Core technique |
