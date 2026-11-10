@@ -15,17 +15,14 @@ def build(scn, quality):
     bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0.6, 0.25)); bench = bpy.context.object; bench.scale = (1.6, 0.5, 0.5)
     bench.data.materials.append(P.new_mat('MAT_Bench', (0.85, 0.86, 0.84, 1), 0.4))
     col, rig = S.add_character('DIVER', loc=(0, 0.6, 0.05), heading=math.pi)
-    CA.make_seated_pose(rig, 1, seat_height=0.5); CA.make_hold_phone_pose(rig, 1); CA.set_rot(rig, 'head', rx=25, frame=1)
-    CA.make_idle(rig, 1, F)
+    CA.make_seated_pose(rig, 1, seat_height=0.5); CA.make_two_hand_phone_pose(rig, 1); CA.set_rot(rig, 'head', rx=22, frame=1)
+    for nm in ('DIVER_TORCH', 'DIVER_TORCH_LIGHT'):
+        if nm in bpy.data.objects: bpy.data.objects[nm].hide_render = True
+    from mathutils import Matrix
     S.link_asset('phone.blend', 'PHONE'); phone = bpy.data.objects['PHONE_ROOT']
-    from mathutils import Matrix, Euler
-    sc = bpy.context.scene
-    for f in range(1, F + 1, 4):   # bake phone into the right hand (screen toward the face)
-        sc.frame_set(f); bpy.context.view_layer.update()
-        pb = rig.pose.bones['hand.R']; M = rig.matrix_world @ pb.matrix
-        phone.matrix_world = M @ Matrix.Translation((0, pb.length * 0.9, 0.02)) @ Euler((math.radians(-90), 0, math.radians(90)), 'XYZ').to_matrix().to_4x4()
-        phone.keyframe_insert('location', frame=f); phone.keyframe_insert('rotation_euler', frame=f)
-    sc.frame_set(1)
+    bpy.context.view_layer.update()
+    phone.matrix_world = (rig.matrix_world @ CA.two_hand_phone_matrix(rig)) @ Matrix(((0, 1, 0, 0), (0, 0, -1, 0), (-1, 0, 0, 0), (0, 0, 0, 1)))
+    bpy.context.view_layer.update()
     S.screen_sequence(seq_dir=os.path.join(P.ROOT, 'renders', 's09_ui'), strength=2.6, flip=True)
     # Posta 2040 skyline far away on the horizon: a few tall boxes in silhouette (real city out of frame range)
     for i in range(14):

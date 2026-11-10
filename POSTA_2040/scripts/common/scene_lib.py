@@ -501,15 +501,17 @@ def cabin_passenger(seat, F):
     import character_anim as CA
     col = link_asset('characters.blend', 'HERO'); rig = bpy.data.objects['RIG_HERO']
     rig.parent = seat; rig.matrix_parent_inverse.identity(); rig.location = (0, -0.05, -0.5); rig.rotation_euler = (0, 0, 0)
-    CA.make_seated_pose(rig, 1, seat_height=0.5); CA.make_hold_phone_pose(rig, 1); CA.set_rot(rig, 'head', rx=10, frame=1)
-    CA.set_rot(rig, 'upper_arm.L', rx=55, ry=25, frame=1); CA.set_rot(rig, 'forearm.L', rx=45, frame=1)
+    CA.make_seated_pose(rig, 1, seat_height=0.5); CA.make_two_hand_phone_pose(rig, 1); CA.set_rot(rig, 'head', rx=32, frame=1)
     bpy.context.view_layer.update()
     add_headphones(rig)
-    hand = rig.matrix_world @ rig.pose.bones['hand.R'].tail
+    # the HOT 70 held in landscape between both hands (client hand reference): long side across, screen to the face, lens outward
+    from mathutils import Matrix
     link_asset('phone.blend', 'PHONE'); phone = bpy.data.objects['PHONE_ROOT']
-    phone.parent = seat; phone.matrix_parent_inverse.identity(); phone.rotation_euler = (math.radians(-90), math.radians(90), 0)
+    grip = rig.matrix_world @ CA.two_hand_phone_matrix(rig)
+    R = Matrix(((0, 1, 0, 0), (0, 0, -1, 0), (-1, 0, 0, 0), (0, 0, 0, 1)))   # phone (X width, Y length, Z screen) -> grip (-Z, X, -Y)
+    phone.parent = seat; phone.matrix_parent_inverse.identity()
+    phone.matrix_world = grip @ R
     bpy.context.view_layer.update()
-    phone.location = seat.matrix_world.inverted() @ hand + Vector((0.0, 0.03, 0.0))   # gripped at the fingertips, screen toward the face
     # warm cabin practical so the hero reads against the blue-hour exterior
     for nm, loc, e, size, col in (('CABIN_PRACTICAL', (0.0, -0.2, 1.4), 160, 0.8, P.HOT70['thermo']),    # warm overhead
                                   ('CITY_GLOW', (0.0, 2.2, 0.6), 220, 2.5, P.HOT70['violet']),             # skyline glow through the door
@@ -530,7 +532,8 @@ def seat_cams(seat, rig, phone):
     ph = inv @ phone.matrix_world.translation
     lens = inv @ bpy.data.objects['PHONE_LENS_MAIN'].matrix_world.translation
     shoulder = head + Vector((-0.32, -0.04, 0.1))          # beside the passenger's head, inside the cabin
-    return {'head': head, 'phone': ph, 'lens': lens, 'shoulder': shoulder, 'out': ph + Vector((0.0, 6.0, -1.2))}
+    n = (inv.to_3x3() @ (phone.matrix_world.to_3x3() @ Vector((0, 0, -1)))).normalized()   # direction the rear camera looks, seat-local
+    return {'head': head, 'phone': ph, 'lens': lens, 'shoulder': shoulder, 'out': ph + Vector((0.0, 6.0, -1.2)), 'n': n}
 
 def hover_helicopter(F, loc=(260, -210, 262)):
     link_asset('helicopter.blend', 'HELICOPTER'); heli = bpy.data.objects['HELI_ROOT']

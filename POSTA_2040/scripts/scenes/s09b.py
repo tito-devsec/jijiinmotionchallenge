@@ -17,9 +17,9 @@ def build(scn, quality):
     to_seat = lambda v: inv @ (phone.matrix_world @ Vector(v))
     tgt = P.make_empty('CAM_TARGET', (0, 0, 0)); tgt.parent = seat
     cam = P.add_camera(loc=(0, 0, 0), target=tgt, lens=40, dof_target=tgt, fstop=4.0); cam.parent = seat; cam.data.clip_start = 0.005
-    keys = [(1, to_seat((0, 0, 0.16)), A['phone']),                                   # the screen fills the frame
+    keys = [(1, to_seat((0, 0, 0.15)), A['phone']),                                   # the screen fills the frame
             (int(F * 0.45), A['phone'] + (A['shoulder'] - A['phone']) * 0.45, A['phone']),
-            (F, A['shoulder'], A['out'])]                                          # beside the passenger: phone, door, skyline
+            (F, A['head'] + Vector((-0.8, -0.14, 0.1)), A['phone'] + Vector((0.3, 0.7, -0.05)))]   # behind the shoulder: hero, phone, door, skyline                                          # beside the passenger: phone, door, skyline
     for f, c, t in keys:
         cam.location = c; cam.keyframe_insert('location', frame=f); tgt.location = t; tgt.keyframe_insert('location', frame=f)
     P.ease_all(cam); P.ease_all(tgt)

@@ -19,22 +19,22 @@ def build(scn, quality):
     CA.make_swim_pose_cycle(rig, 1, fp, kick_frames=36)
     P.key(rig, 1, loc=(rest.x - 9.0, rest.y, floor + 0.4))
     # pick-up: reach the right arm down/forward
-    CA.set_rot(rig, 'upper_arm.R', rx=60, frame=fp); CA.set_rot(rig, 'forearm.R', rx=10, frame=fp)
+    CA.set_rot(rig, 'upper_arm.L', rx=60, frame=fp); CA.set_rot(rig, 'forearm.L', rx=10, frame=fp)
     # solve rig position so the right hand touches the phone at the pick-up frame
     P.key(rig, fp, loc=(rest.x - 1.4, rest.y, floor + 0.4))
     sc.frame_set(fp); bpy.context.view_layer.update()
-    hand = rig.matrix_world @ rig.pose.bones['hand.R'].tail
+    hand = rig.matrix_world @ rig.pose.bones['hand.L'].tail
     rig.location += Vector((rest.x - hand.x, rest.y - hand.y, rest.z + 0.02 - hand.z)); rig.keyframe_insert('location', frame=fp)
     # rise to an upright hover and hold the phone in front of the mask; then a slow amazed head tilt
-    CA.set_rot(rig, 'hips', rx=-25, frame=fh); CA.make_hold_phone_pose(rig, fh)
+    CA.set_rot(rig, 'hips', rx=-25, frame=fh); CA.make_hold_phone_pose(rig, fh, side='L')
     CA.set_rot(rig, 'head', rx=20, frame=fh); CA.set_rot(rig, 'head', rx=14, rz=10, frame=F)
-    CA.set_rot(rig, 'upper_arm.L', rx=30, ry=-10, frame=F)
+    CA.set_rot(rig, 'upper_arm.R', rx=30, ry=10, frame=F)
     P.key(rig, fh, loc=(rig.location.x + 0.3, rig.location.y, floor + 0.2)); P.key(rig, F, loc=(rig.location.x + 0.35, rig.location.y, floor + 0.25))
     # bake the phone into the hand after pick-up: palm offset, turning screen toward the diver's face over 36 frames
     phone.keyframe_insert('location', frame=fp - 1); phone.keyframe_insert('rotation_euler', frame=fp - 1)
     for f in range(fp, F + 1):
         sc.frame_set(f); bpy.context.view_layer.update()
-        pb = rig.pose.bones['hand.R']; M = rig.matrix_world @ pb.matrix
+        pb = rig.pose.bones['hand.L']; M = rig.matrix_world @ pb.matrix
         k = min(1.0, (f - fp) / 36.0); k = k * k * (3 - 2 * k)
         local = Matrix.Translation((0, pb.length * 0.9, 0.02)) @ Euler((math.radians(-90 * k), 0, math.radians(90)), 'XYZ').to_matrix().to_4x4()
         W = M @ local; phone.matrix_world = W

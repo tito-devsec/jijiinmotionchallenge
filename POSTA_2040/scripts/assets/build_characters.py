@@ -933,7 +933,7 @@ def rerest(C):
     for o in meshes:
         c = get_co(o); c[:, 2] -= zmin; set_co(o, c)
     arm.data.transform(Matrix.Translation((0, 0, -zmin)))
-    top = get_co(C['body'])[:, 2].max(); k = C['height'] / top
+    k = C['height'] / (C['L']['top'] - zmin)          # head top (also valid when the head mesh was removed)
     for o in meshes: set_co(o, get_co(o) * k)
     arm.data.transform(Matrix.Scale(k, 4))
     refresh_joints(C)
@@ -1009,7 +1009,7 @@ def gear(C, ob, bone=None, bones=None, sigma=0.06):
 def metal(name, color, rough=0.3, metallic=1.0):
     return P.new_mat(name, color, rough, metal=metallic)
 
-def afro(C, lift=0.034, base=0.006, curl=0.007, mat=None, subdiv=1):
+def afro(C, lift=0.034, base=0.006, curl=0.011, mat=None, subdiv=1):
     """Short natural afro: scalp surface pushed out (rounded top, tighter sides) + dense curl displacement that
     fades out toward the hairline."""
     L = C['L']; z0 = L['ear_top.L'].z - 0.01; z1 = L['top']
@@ -1017,7 +1017,7 @@ def afro(C, lift=0.034, base=0.006, curl=0.007, mat=None, subdiv=1):
     def off(co, R):
         t = smoothstep((co[:, 2] - z0) / (z1 - z0) * 1.3)
         return base + lift * (0.25 + 0.75 * t)
-    mat = mat or hair_material(f'MAT_{C["name"]}_hair_afro', scale=150.0, strength=1.0, dist=0.005)
+    mat = mat or hair_material(f'MAT_{C["name"]}_hair_afro', scale=70.0, strength=1.0, dist=0.012)
     ob = shell_from(C, C['body'], fn, f'{C["name"]}_afro', mat, offset=0.0, offset_fn=lambda co, R: np.full(len(co), 0.001), smooth=0, hem=0.0, subdiv=subdiv)
     arm = C['arm']
     for m in list(ob.modifiers):
@@ -1473,7 +1473,7 @@ def build_diver():
 
 # ============================================================================= ROBOT (armoured suit)
 def build_robot():
-    C = mh_character('ROBOT', height=1.86, gender=1.0, age=0.5, muscle=1.0, weight=0.62, skin='young_african_male',
+    C = mh_character('ROBOT', height=1.86, gender=1.0, age=0.5, muscle=1.0, weight=0.52, skin='young_african_male',
                      hair=None, brows=None, lashes=None, clothes=(), keep_head=False)
     name, col, body, J = C['name'], C['col'], C['body'], C['J']
     L = C['L']
@@ -1556,15 +1556,12 @@ def build_robot():
                 plate(f'{fn_}{seg}_plate.{S}', lambda co, R, b=b, dors=dors: np.where(R.w(b) > 0.5, band(R, b, 0.14, 0.86, dors, 0.2), -1.0),
                       b, offset=0.0025, thick=0.0028, smooth=0, subdiv=0)
         fr = (sg * 0.55, 0.83, 0.0)
-        plate(f'thigh_guard.{S}', lambda co, R, S=S, fr=fr: np.where(R.w('leg.' + S) > 0.5, band(R, f'thigh.{S}', 0.20, 0.86, fr, -0.25), -1.0),
+        plate(f'thigh_guard.{S}', lambda co, R, S=S, fr=fr: np.where(R.w('leg.' + S) > 0.5, band(R, f'thigh.{S}', 0.20, 0.86, fr, 0.05), -1.0),
               f'thigh.{S}', offset=0.013, thick=0.009,
               lines=lambda co, R, S=S: np.maximum(0.005 - np.abs(R.t(f'thigh.{S}') - 0.40) * 0.42, 0.005 - np.abs(R.t(f'thigh.{S}') - 0.72) * 0.42))
         plate(f'shin_guard.{S}', lambda co, R, S=S: np.where(R.w('leg.' + S) > 0.5, band(R, f'shin.{S}', 0.15, 0.90, (0, 1, 0), -0.82), -1.0),
               f'shin.{S}', offset=0.012, thick=0.009,
               lines=lambda co, R, S=S: np.maximum(0.005 - np.abs(R.t(f'shin.{S}') - 0.30) * 0.42, 0.005 - np.abs(R.t(f'shin.{S}') - 0.74) * 0.42))
-        boot = shell_from(C, body, lambda co, R, S=S: np.where(R.w('leg.' + S) > 0.5, (R.t(f'shin.{S}') - 0.93) * 0.42, -1.0), f'{name}_boot.{S}', armor,
-                          offset=0.014, smooth=10, hem=0.006, subdiv=1, bone=f'foot.{S}')
-        plates.append(boot)
     # harness / belt in Green Texture webbing (olive straps in the reference)
     belt = shell_from(C, body, lambda co, R: np.minimum(torso_mask(R), 0.024 - np.abs(co[:, 2] - (zs0 - 0.012))), f'{name}_belt', strap_m, offset=0.021, smooth=1, hem=0.004, subdiv=1)
     C['cloth'].append(belt)
@@ -1586,12 +1583,13 @@ def build_robot():
         gear(C, raw(K, f'{name}_elbow.{sd_}', col, dark), f'forearm.{sd_}')
         an, toe = Vector(J[f'foot.{sd_}'][0]), Vector(J[f'foot.{sd_}'][1])
         f = Vector((toe.x - an.x, toe.y - an.y, 0)).normalized()
-        K = Shape()
-        K.loft([(tuple(Vector((an.x, an.y, 0.012)) + f * a), w, 0.012) for a, w in ((-0.085, 0.040), (-0.03, 0.052), (0.10, 0.060), (0.20, 0.058), (0.245, 0.040))], segs=20, vhint=(0, 0, 1), sq=3.0)
-        gear(C, raw(K, f'{name}_sole.{sd_}', col, dark), f'foot.{sd_}')
-    boots = [o for o in C['gear'] if '_boot.' in o.name]
-    for o in boots:
-        paint_region(o, lambda co, R: np.maximum(0.045 - co[:, 2], 0.006 - np.abs(co[:, 2] - 0.105)), dark, J)
+        Bt = Shape()
+        Bt.loft([(tuple(Vector((an.x, an.y, zc_)) + f * a_), w_, h_) for a_, w_, h_, zc_ in ((-0.088, 0.040, 0.046, 0.056), (-0.035, 0.052, 0.060, 0.066), (0.05, 0.057, 0.052, 0.056),
+                                                                                   (0.14, 0.060, 0.042, 0.046), (0.205, 0.058, 0.034, 0.038), (0.255, 0.042, 0.024, 0.030))], segs=24, vhint=(0, 0, 1), sq=2.5)
+        Bt.loft([((an.x, an.y - 0.006, 0.07), 0.056, 0.062), ((an.x, an.y - 0.004, an.z + 0.05), 0.054, 0.058), ((an.x, an.y, an.z + 0.115), 0.058, 0.062)], segs=24, sq=2.3)
+        bt = solid(Bt, f'{name}_boot.{sd_}', col, voxel=0.005, smooth=3, mat=armor, ratio=0.35)
+        paint_region(bt, lambda co, R, an=an: np.maximum.reduce([0.022 - co[:, 2], 0.007 - np.abs(co[:, 2] - (an.z + 0.045)), 0.006 - np.abs((co[:, 1] - an.y) * f.y + (co[:, 0] - an.x) * f.x - 0.165)]), dark, J)
+        gear(C, bt, f'foot.{sd_}')
     # --- helmet with visor
     hw = L['head_w'] + 0.020; cy = (L['brow_y'] + L['back']) / 2; hd = (L['brow_y'] - L['back']) / 2 + 0.022
     ez, top, chin, mz = L['eye.R'].z, L['top'], L['chin'].z, L['mouth'].z
@@ -1692,16 +1690,42 @@ def build_all(names=None):
     bpy.context.view_layer.update()
     return chars
 
+def shrink_images(skin_max=2048, other_max=1024):
+    """Keep the .blend small (GitHub limit): one image datablock per source file shared by all characters,
+    skin maps <= 2048 px, clothes / hair / eye maps <= 1024 px, everything packed."""
+    by = {}
+    for im in list(bpy.data.images):
+        if im.source != 'FILE' or not im.filepath: continue
+        key = os.path.normpath(bpy.path.abspath(im.filepath))
+        if key in by: im.user_remap(by[key])
+        else: by[key] = im
+    for im in list(bpy.data.images):
+        if im.users == 0: bpy.data.images.remove(im)
+    n = 0
+    for key, im in by.items():
+        if im.name not in bpy.data.images: continue
+        lim = skin_max if (os.sep + 'skins' + os.sep) in key else other_max
+        w, h = im.size
+        if max(w, h) > lim:
+            k = lim / max(w, h); im.scale(max(1, int(w * k)), max(1, int(h * k))); n += 1
+        if not im.packed_file: im.pack()
+    print(f'images: {len(by)} unique files, {n} downscaled')
+
 def save_blend(chars, path=OUT_BLEND):
     for c in chars.values(): c['root'].location = (0, 0, 0)
     bpy.context.scene.frame_set(1)
+    shrink_images()
+    try: bpy.ops.outliner.orphans_purge(do_local_ids=True, do_linked_ids=True, do_recursive=True)
+    except Exception as ex: print('orphans_purge:', ex)
     for blk in (bpy.data.meshes, bpy.data.materials, bpy.data.images, bpy.data.textures, bpy.data.node_groups, bpy.data.armatures):
         for d in list(blk):
             if d.users == 0: blk.remove(d)
     bpy.ops.file.pack_all()
     os.makedirs(os.path.dirname(path), exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=path, compress=True)
-    print('saved', path, f'{os.path.getsize(path) / 1e6:.1f} MB')
+    size = os.path.getsize(path) / 1e6
+    print('saved', path, f'{size:.1f} MB')
+    if size > 90: print('[warn] characters.blend is over the 90 MB budget')
     print('TRIANGLES ' + ', '.join(f'{n}={c["tris"]}' for n, c in chars.items()))
 
 def load_chars():
@@ -1736,25 +1760,29 @@ def previews(chars):
     if 'twohand' in shots and 'HERO' in chars:
         arm = solo('HERO'); A.make_two_hand_phone_pose(arm, 1)
         M = arm.matrix_world @ A.two_hand_phone_matrix(arm)
-        bm = bmesh.new(); bmesh.ops.create_cube(bm, size=1.0); me = bpy.data.meshes.new('PHONE_STANDIN'); bm.to_mesh(me); bm.free()
-        box = bpy.data.objects.new('PHONE_STANDIN', me); bpy.context.scene.collection.objects.link(box)
-        box.matrix_world = M @ Matrix.Diagonal((0.168, 0.0075, 0.079, 1.0))
-        me.materials.append(P.new_mat('MAT_phone_standin', shade(NIGHT, 0.8), 0.25, coat=0.6))
+        objs = []
+        for nm_, dims, off, mat in (('PHONE_STANDIN', (0.168, 0.0075, 0.079), 0.0, P.new_mat('MAT_phone_standin', shade(NIGHT, 0.8), 0.45)),
+                                    ('PHONE_STANDIN_SCREEN', (0.158, 0.0006, 0.071), -0.0039, P.new_mat('MAT_phone_standin_screen', shade(DIVE, 0.6), 0.2, emission=DIVE, estrength=0.6))):
+            bm = bmesh.new(); bmesh.ops.create_cube(bm, size=1.0); me = bpy.data.meshes.new(nm_); bm.to_mesh(me); bm.free()
+            box = bpy.data.objects.new(nm_, me); bpy.context.scene.collection.objects.link(box)
+            box.matrix_world = M @ Matrix.Translation((0, off, 0)) @ Matrix.Diagonal((dims[0], dims[1], dims[2], 1.0))
+            me.materials.append(mat); objs.append(box)
         c = M.translation; print('TWO_HAND_PHONE matrix (rig space):', [tuple(round(v, 4) for v in r) for r in (arm.matrix_world.inverted() @ M)])
-        cam = P.add_camera('CAM_2H', loc=(c.x + 0.20, c.y - 0.16, c.z + 0.50), target=(c.x, c.y + 0.01, c.z), lens=50)
+        hd = arm.matrix_world @ arm.pose.bones['head'].head
+        cam = P.add_camera('CAM_2H', loc=(hd.x + 0.10, hd.y + 0.07, hd.z + 0.13), target=(c.x, c.y, c.z + 0.01), lens=42)
         render(os.path.join(PREV, 'asset_two_hand_phone_pose.png'), 1, cam)
-        bpy.data.objects.remove(box)
+        for o in objs: bpy.data.objects.remove(o)
     if 'walk' in shots and 'HERO' in chars:
         arm = solo('HERO'); A.make_walk_cycle(arm, 1, 48, stride_frames=24)
         cam = P.add_camera('CAM_WALK', loc=(-2.6, 3.7, 1.25), target=(0, 0, 0.93), lens=42)
         render(os.path.join(PREV, 'asset_hero_walk.png'), 7, cam)
     if 'diver' in shots and 'DIVER' in chars:
         arm = solo('DIVER'); A.curl_fingers(arm, 'R', 0.72, thumb=0.5)
-        cam = P.add_camera('CAM_DIVER', loc=(1.9, 3.3, 1.35), target=(0, 0.1, 0.98), lens=34)
+        cam = P.add_camera('CAM_DIVER', loc=(1.9, 3.3, 1.35), target=(0, 0.12, 0.98), lens=37)
         render(os.path.join(PREV, 'asset_diver_check.png'), 1, cam)
     if 'robot' in shots and 'ROBOT' in chars:
         solo('ROBOT')
-        cam = P.add_camera('CAM_ROBOT', loc=(1.8, 3.4, 1.4), target=(0, 0, 0.98), lens=34)
+        cam = P.add_camera('CAM_ROBOT', loc=(1.8, 3.4, 1.4), target=(0, 0, 0.96), lens=34)
         render(os.path.join(PREV, 'asset_robot.png'), 1, cam)
 
 if __name__ == '__main__':

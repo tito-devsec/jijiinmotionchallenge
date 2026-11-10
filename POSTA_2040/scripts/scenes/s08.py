@@ -16,7 +16,7 @@ def build(scn, quality):
     rig, phone = S.cabin_passenger(seat, F)
     S.screen_sequence(seq_dir=os.path.join(P.ROOT, 'renders', 's09_ui'), strength=2.6, flip=True)
     bpy.context.view_layer.update()
-    A = S.seat_cams(seat, rig, phone); Y = Vector((0, 1, 0))
+    A = S.seat_cams(seat, rig, phone); Y = A['n']
     tgt = P.make_empty('CAM_TARGET', (0, 0, 0)); tgt.parent = seat
     cam = P.add_camera(loc=(0, 0, 0), target=tgt, lens=28, dof_target=tgt, fstop=5.6); cam.parent = seat; cam.data.clip_start = 0.001
     keys = [(1, A['shoulder'], A['out']),                                               # beside the passenger: filming the skyline
