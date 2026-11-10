@@ -14,6 +14,18 @@ def build(scn, quality):
     S.enable_mist(start=400, depth=3000, color=(0.1, 0.1, 0.2, 1), strength=0.35)
     heli, seat = S.hover_helicopter(F)
     rig, phone = S.cabin_passenger(seat, F)
+    # before the lens dive the hero lets go with the right hand (it covers the rear camera) and holds the phone left-handed
+    def _key(pb, f):
+        pb.keyframe_insert('rotation_quaternion' if pb.rotation_mode == 'QUATERNION' else 'rotation_euler', frame=f)
+    right = [pb for pb in rig.pose.bones if pb.name.endswith('.R') and not pb.name.startswith(('thigh', 'shin', 'foot'))]
+    fA, fB = int(F * 0.40), int(F * 0.54)
+    for pb in right: _key(pb, 1); _key(pb, fA)
+    for pb in right:
+        if pb.rotation_mode == 'QUATERNION': pb.rotation_quaternion = (1, 0, 0, 0)
+        else: pb.rotation_euler = (0, 0, 0)
+        _key(pb, fB)
+    CA.set_rot(rig, 'upper_arm.R', rx=18, ry=-12, frame=fB); CA.set_rot(rig, 'forearm.R', rx=35, frame=fB)
+    bpy.context.scene.frame_set(1)
     S.screen_sequence(seq_dir=os.path.join(P.ROOT, 'renders', 's09_ui'), strength=2.6, flip=True)
     bpy.context.view_layer.update()
     A = S.seat_cams(seat, rig, phone); Y = A['n']

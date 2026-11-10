@@ -449,12 +449,26 @@ def facade_night_material(name='MAT_Wall2040'):
     rim = math_('MULTIPLY', math_('GREATER_THAN', hn.outputs['Fac'], v2=0.972), v2=9.0)        # glowing outline at each tier top
     band = math_('MULTIPLY', math_('LESS_THAN', math_('FRACT', math_('DIVIDE', zc, v2=14.0)), v2=0.02), v2=3.0)  # service-floor light bands
     tot = math_('ADD', math_('ADD', wl, rim), band)
+    # one colourway per building (poster: blue towers with orange, green, violet and silver neighbours)
+    orand = N('ShaderNodeAttribute'); orand.attribute_name = 'obj_rand'
+    tint = N('ShaderNodeValToRGB'); tint.color_ramp.interpolation = 'CONSTANT'; te = tint.color_ramp.elements
+    te[0].position = 0.0; te[0].color = H['dive']; te[1].position = 0.42; te[1].color = H['green']
+    for pos, key in ((0.56, 'violet'), (0.70, 'thermo'), (0.82, 'silver'), (0.92, 'thermo_deep')):
+        e = te.new(pos); e.color = H[key]
+    L(orand.outputs['Fac'], tint.inputs[0])
+    bright = N('ShaderNodeMix'); bright.data_type = 'RGBA'; bright.blend_type = 'MIX'; bright.inputs['Factor'].default_value = 0.35
+    L(tint.outputs[0], bright.inputs['A']); bright.inputs['B'].default_value = H['silver']
+    body = N('ShaderNodeMix'); body.data_type = 'RGBA'; body.blend_type = 'MULTIPLY'; body.inputs['Factor'].default_value = 1.0
+    L(tint.outputs[0], body.inputs['A']); body.inputs['B'].default_value = (0.55, 0.55, 0.55, 1)
+    L(body.outputs['Result'], b.inputs['Base Color'])
     ramp = N('ShaderNodeValToRGB'); ramp.color_ramp.interpolation = 'CONSTANT'
-    ramp.color_ramp.elements[0].color = (0.16, 0.36, 1.0, 1); ramp.color_ramp.elements[1].position = 0.78; ramp.color_ramp.elements[1].color = H['silver']
+    ramp.color_ramp.elements[0].color = (1, 1, 1, 1); ramp.color_ramp.elements[1].position = 0.78; ramp.color_ramp.elements[1].color = H['silver']
     L(wn.outputs['Color'], ramp.inputs[0])
-    mixc = N('ShaderNodeMix'); mixc.data_type = 'RGBA'; L(math_('GREATER_THAN', hn.outputs['Fac'], v2=0.972), mixc.inputs['Factor'])
-    L(ramp.outputs[0], mixc.inputs['A']); mixc.inputs['B'].default_value = (0.45, 0.62, 1.0, 1)
-    L(mixc.outputs['Result'], b.inputs['Emission Color']); L(tot, b.inputs['Emission Strength'])
+    wcol = N('ShaderNodeMix'); wcol.data_type = 'RGBA'; wcol.blend_type = 'MULTIPLY'; wcol.inputs['Factor'].default_value = 1.0
+    L(ramp.outputs[0], wcol.inputs['A']); L(bright.outputs['Result'], wcol.inputs['B'])
+    L(wcol.outputs['Result'], b.inputs['Emission Color'])
+    glowbase = math_('ADD', tot, v2=0.22)       # the tinted glass itself stays readable under a clear sky
+    L(glowbase, b.inputs['Emission Strength'])
     return m
 
 def apply_bluehour_city(objs):
@@ -469,7 +483,7 @@ def apply_bluehour_city(objs):
     if 'CITY_SPIRES' in objs: objs['CITY_SPIRES'].material_slots[0].material = P.new_mat('MAT_Spire', H['silver'], 0.3, 1.0, emission=(0.6, 0.75, 1.0, 1), estrength=3.0)
     rb = road.node_tree.nodes['Principled BSDF']; rb.inputs['Emission Color'].default_value = H['thermo']
     for n in road.node_tree.nodes:
-        if n.type == 'MATH' and n.operation == 'MULTIPLY': n.inputs[1].default_value = 0.9
+        if n.type == 'MATH' and n.operation == 'MULTIPLY': n.inputs[1].default_value = 0.4
         if n.type == 'VALTORGB': n.color_ramp.elements[0].position = 0.9; n.color_ramp.elements[1].position = 0.97
 
 def add_headphones(rig, color=(0.03, 0.03, 0.035, 1), accent=None):
@@ -500,7 +514,10 @@ def cabin_passenger(seat, F):
     Returns (rig, phone). Phone is parented to the seat at the posed hand."""
     import character_anim as CA
     col = link_asset('characters.blend', 'HERO'); rig = bpy.data.objects['RIG_HERO']
-    rig.parent = seat; rig.matrix_parent_inverse.identity(); rig.location = (0, -0.05, -0.5); rig.rotation_euler = (0, 0, 0)
+    DOOR = 0.80   # metres toward the open door from the bench: the hero sits at the entrance, phone held out over the sill
+    rig.parent = seat; rig.matrix_parent_inverse.identity(); rig.location = (0, DOOR, -0.5); rig.rotation_euler = (0, 0, 0)
+    bpy.ops.mesh.primitive_cube_add(size=1); js = bpy.context.object; js.name = 'JUMP_SEAT'; js.parent = seat; js.scale = (0.5, 0.42, 0.42); js.location = (0, DOOR - 0.12, -0.29)
+    js.data.materials.append(P.new_mat('MAT_JumpSeat', P.HOT70['night'], 0.6))
     CA.make_seated_pose(rig, 1, seat_height=0.5); CA.make_two_hand_phone_pose(rig, 1); CA.set_rot(rig, 'head', rx=32, frame=1)
     bpy.context.view_layer.update()
     add_headphones(rig)
@@ -508,6 +525,9 @@ def cabin_passenger(seat, F):
     from mathutils import Matrix
     link_asset('phone.blend', 'PHONE'); phone = bpy.data.objects['PHONE_ROOT']
     grip = rig.matrix_world @ CA.two_hand_phone_matrix(rig)
+    for fn in ('index', 'middle'):   # right-hand fingers rest along the top edge so the rear camera island stays clear
+        try: CA.set_finger(rig, 'R', fn, 4, 4, 4, 1)
+        except Exception as e: print('finger pose skipped', e)
     R = Matrix(((0, 1, 0, 0), (0, 0, -1, 0), (-1, 0, 0, 0), (0, 0, 0, 1)))   # phone (X width, Y length, Z screen) -> grip (-Z, X, -Y)
     phone.parent = seat; phone.matrix_parent_inverse.identity()
     phone.matrix_world = grip @ R
