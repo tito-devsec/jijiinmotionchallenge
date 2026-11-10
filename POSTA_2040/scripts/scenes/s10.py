@@ -58,4 +58,5 @@ def build(scn, quality):
         sp.hide_render = True; sp.keyframe_insert('hide_render', frame=1); sp.hide_render = False; sp.keyframe_insert('hide_render', frame=f_hit)
         for f in range(f_hit, F + 1):
             tt = (f - f_hit) / fps; sp.location = (hit.x + vx * tt, hit.y + vy * tt, sea + vz * tt - 0.5 * g * tt * tt); sp.keyframe_insert('location', frame=f)
+    S.add_air_traffic(F)
     P.setup_render(samples=28, frame_end=F, motion_blur=True); bpy.context.scene.render.motion_blur_shutter = 0.25; S.frame_range(scn)

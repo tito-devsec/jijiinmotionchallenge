@@ -552,3 +552,43 @@ def holo_look(lines=1.6, glass=0.55):
         n = m.node_tree.nodes
         if 'HOLO_LINES' in n: n['HOLO_LINES'].inputs[1].default_value = lines
         if 'HOLO_GLASS' in n: n['HOLO_GLASS'].inputs['Color'].default_value = tuple(glass * (0.4 + 1.2 * c) for c in P.HOT70['dive'][:3]) + (1,)
+
+def add_air_traffic(F, cars=12, helis=2, seed=7, center=(-120.0, 180.0), spread=520.0, alts=(55, 85, 120, 160), scale=1.0):
+    """2040 sky traffic using the film's own models: flying Tesla-style roadsters (with underglow) in straight sky-lanes
+    between the towers, and — in scenes without the hero helicopter — the same helicopter model crossing the skyline."""
+    import random
+    rnd = random.Random(seed)
+    car_col = bpy.data.collections.get('ROADSTER') or link_asset('roadster.blend', 'ROADSTER')
+    lc = bpy.context.view_layer.layer_collection.children.get('ROADSTER')
+    glow = P.new_mat('MAT_Thruster', P.HOT70['night'], 0.4, emission=(0.35, 0.55, 1.0, 1), estrength=12.0)
+    for i in range(cars):
+        ang = rnd.choice([0.35, 0.35 + math.pi, 1.9, 1.9 + math.pi]) + rnd.uniform(-0.08, 0.08)   # two crossing lane directions
+        dx, dy = math.cos(ang), math.sin(ang); off = rnd.uniform(-spread, spread); alt = rnd.choice(list(alts)) + rnd.uniform(-6, 6)
+        ox, oy = center[0] - dy * off, center[1] + dx * off; speed = rnd.uniform(28, 45); t0 = rnd.uniform(-260, 60)
+        e = instance_collection(car_col, f'AIRCAR_{i}', rot=(0, 0, ang - math.pi / 2), scale=scale)
+        for f in (1, F):
+            d = t0 + speed * (f - 1) / 24.0 + 300 * rnd.random() * 0
+            e.location = (ox + dx * d, oy + dy * d, alt); e.keyframe_insert('location', frame=f)
+        for fc in e.animation_data.action.fcurves:
+            for kp in fc.keyframe_points: kp.interpolation = 'LINEAR'
+        bpy.ops.mesh.primitive_plane_add(size=1); g = bpy.context.object; g.name = f'AIRCAR_GLOW_{i}'; g.scale = (1.5, 3.4, 1); g.parent = e; g.location = (0, 0, 0.12)
+        g.rotation_euler = (math.pi, 0, 0); g.data.materials.append(glow)
+        for nm, y, col in (('HEAD', 2.3, (0.8, 0.88, 1.0, 1)), ('TAIL', -2.4, P.HOT70['thermo'])):   # running lights, visible from any angle
+            bpy.ops.mesh.primitive_uv_sphere_add(radius=0.28, segments=8, ring_count=6); l = bpy.context.object; l.name = f'AIRCAR_{nm}_{i}'
+            l.parent = e; l.location = (0, y, 0.75); l.scale = (3.0, 0.6, 0.6)
+            l.data.materials.append(P.new_mat('MAT_AirLight_' + nm, P.HOT70['night'], 0.4, emission=col, estrength=25.0))
+    if helis and 'HELI_ROOT' not in bpy.data.objects:
+        hcol = link_asset('helicopter.blend', 'HELICOPTER')
+        rot = bpy.data.objects['ROTOR_MAIN']; rot.rotation_euler = (0, 0, 0); rot.keyframe_insert('rotation_euler', frame=1)
+        rot.rotation_euler = (0, 0, math.radians(360 * 6 * F / 24)); rot.keyframe_insert('rotation_euler', frame=F)
+        for fc in rot.animation_data.action.fcurves:
+            for kp in fc.keyframe_points: kp.interpolation = 'LINEAR'
+        bpy.context.view_layer.layer_collection.children['HELICOPTER'].exclude = True     # source hidden, instances fly
+        for i in range(helis):
+            ang = rnd.uniform(0, 6.28); dx, dy = math.cos(ang), math.sin(ang); alt = rnd.uniform(200, 300)
+            ox, oy = center[0] + rnd.uniform(-300, 300), center[1] + rnd.uniform(-300, 300)
+            e = instance_collection(hcol, f'AIRHELI_{i}', rot=(math.radians(-5), 0, ang - math.pi / 2))
+            for f, d in ((1, -220), (F, -220 + 38 * F / 24.0)):
+                e.location = (ox + dx * d, oy + dy * d, alt); e.keyframe_insert('location', frame=f)
+            for fc in e.animation_data.action.fcurves:
+                for kp in fc.keyframe_points: kp.interpolation = 'LINEAR'

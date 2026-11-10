@@ -33,4 +33,5 @@ def build(scn, quality):
     aim = P.make_empty('AIM', (stage[0] - 0.09, stage[1], stage[2] + 0.11))
     cam = P.add_camera(loc=(stage[0] - 0.05, stage[1] - 1.25, stage[2] + 0.2), target=aim, lens=85, dof_target=phone, fstop=4.0)
     S.cam_path(cam, [(1, (stage[0] + 0.1, stage[1] - 1.35, stage[2] + 0.24)), (F, (stage[0] - 0.06, stage[1] - 1.15, stage[2] + 0.18))])
+    S.add_air_traffic(F, cars=10, center=(120.0, 60.0), spread=300.0, alts=(30, 50, 80))
     P.setup_render(samples=36, frame_end=F); S.frame_range(scn)

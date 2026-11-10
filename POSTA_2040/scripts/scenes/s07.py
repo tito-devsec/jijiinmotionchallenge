@@ -37,4 +37,5 @@ def build(scn, quality):
     cam = P.add_camera(loc=(120, -40, 25), target=(-60, 120, 20), lens=32)
     S.cam_path(cam, [(1, (120, -40, 25)), (int(F * 0.45), (260, -250, 190)), (int(F * 0.8), (330, -330, 262)), (F, (300, -250, 265))],
                [(1, (-60, 120, 20)), (int(F * 0.45), (-20, 100, 60)), (int(F * 0.6), (420, -480, 300)), (F, (262, -214, 263))])
+    S.add_air_traffic(F)
     P.setup_render(samples=28, frame_end=F, motion_blur=False); S.frame_range(scn)

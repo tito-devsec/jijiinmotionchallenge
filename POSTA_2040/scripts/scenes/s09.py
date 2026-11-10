@@ -19,4 +19,5 @@ def build(scn, quality):
         cam.rotation_euler = cam.rotation_euler  # tracked by constraint; add tiny offsets via delta
         cam.delta_rotation_euler = (math.radians(random.uniform(-0.15, 0.15)), math.radians(random.uniform(-0.15, 0.15)), 0)
         cam.keyframe_insert('delta_rotation_euler', frame=f)
+    S.add_air_traffic(F, cars=16, center=(40.0, 20.0), spread=260.0, alts=(120, 150, 185, 215), scale=1.6)
     P.setup_render(samples=28, frame_end=F); S.frame_range(scn)

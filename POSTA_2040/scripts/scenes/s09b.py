@@ -25,4 +25,5 @@ def build(scn, quality):
     P.ease_all(cam); P.ease_all(tgt)
     for f, l in ((1, 40), (F, 20)):
         cam.data.lens = l; cam.data.keyframe_insert('lens', frame=f)
+    S.add_air_traffic(F)
     P.setup_render(samples=28, frame_end=F); S.frame_range(scn)

@@ -59,4 +59,5 @@ def build(scn, quality):
     cam = P.add_camera(loc=c0, target=(t0[0], t0[1], t0[2] + 12), lens=28)
     S.cam_path(cam, [(1, c0), (int(F * 0.62), c1), (F, (220, -160, 90))],
                [(1, (t0[0], t0[1], t0[2] + 14)), (int(F * 0.62), (t1[0], t1[1], t1[2] + 1.5)), (F, (-60, 150, 40))])
+    S.add_air_traffic(F)
     P.setup_render(samples=28, frame_end=F); S.frame_range(scn)
